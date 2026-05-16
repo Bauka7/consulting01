@@ -5,6 +5,6 @@ import lombok.Data;
 
 @Data
 public class UpdateAchievementDto {
-    @NotBlank(message = "Описание обязательно")
+    @NotBlank(message = "Description is required")
     private String description;
 }

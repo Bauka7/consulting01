@@ -15,7 +15,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -76,19 +75,21 @@ public class RequestController {
     @PreAuthorize("hasAnyRole('CLIENT', 'CONSULTANT', 'ADMIN')")
     public ResponseEntity<RequestDto> updateRequest(
             @PathVariable UUID id,
-            @RequestBody UpdateRequestDto updateRequest) {
+            @Valid @RequestBody UpdateRequestDto updateRequest) {
         RequestDto updatedRequest = requestService.update(id, updateRequest);
         return ResponseEntity.ok(updatedRequest);
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('CONSULTANT')")
+    @PreAuthorize("hasAnyRole('CONSULTANT', 'ADMIN')")
     public ResponseEntity<RequestDto> updateRequestStatus(
             @PathVariable UUID id,
             @RequestParam RequestStatus status,
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @RequestParam(required = false) String comment) {
-        RequestDto updatedRequest = requestService.updateStatus(id, status, principal.getId(), comment);
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        RequestDto updatedRequest = requestService.updateStatus(id, status, principal.getId(), isAdmin, comment);
         return ResponseEntity.ok(updatedRequest);
     }
 
@@ -96,16 +97,7 @@ public class RequestController {
     @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
     public ResponseEntity<String> deleteRequest(@PathVariable UUID id) {
         requestService.delete(id);
-        return ResponseEntity.ok("Запрос удален");
+        return ResponseEntity.ok("Request deleted");
     }
 
-    @GetMapping("/status")
-    @PreAuthorize("hasAnyRole('CONSULTANT', 'ADMIN')")
-    public ResponseEntity<Page<RequestDto>> getPendingRequests(
-            @RequestParam RequestStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Page<RequestDto> requests = requestService.getByStatus(status, PageRequest.of(page, size));
-        return ResponseEntity.ok(requests);
-    }
 }

@@ -42,9 +42,15 @@ public class NotificationService {
 
     @Transactional
     public NotificationDto createNotification(UUID userId, String message) {
+        return createNotification(userId, message, null);
+    }
+
+    @Transactional
+    public NotificationDto createNotification(UUID userId, String message, UUID requestId) {
         return create(NotificationDto.builder()
                 .userId(userId)
                 .message(message)
+                .requestId(requestId)
                 .isRead(false)
                 .build());
     }
@@ -57,6 +63,7 @@ public class NotificationService {
         Notification notification = Notification.builder()
                 .user(user)
                 .message(notificationDto.getMessage())
+                .requestId(notificationDto.getRequestId())
                 .isRead(false)
                 .build();
 

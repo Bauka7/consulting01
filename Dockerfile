@@ -1,17 +1,15 @@
-FROM eclipse-temurin:17-jdk AS builder
+FROM gradle:8.14.3-jdk17 AS builder
 WORKDIR /app
 
-# Копируем Gradle wrapper и файлы сборки
-COPY gradlew .
-COPY gradle gradle
+# Copy build files first so dependency resolution can be cached
 COPY build.gradle.kts settings.gradle.kts ./
-RUN chmod +x ./gradlew
+RUN gradle dependencies --no-daemon || true
 
-# Копируем исходники и собираем jar
+# Copy source files and build the jar
 COPY src src
-RUN ./gradlew bootJar --no-daemon
+RUN gradle bootJar --no-daemon
 
-# ===== STAGE 2: Запуск готового приложения =====
+# ===== STAGE 2: Run the built application =====
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 

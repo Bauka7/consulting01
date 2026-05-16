@@ -28,6 +28,9 @@ public class Notification {
     
     @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
+
+    @Column(name = "request_id")
+    private UUID requestId;
     
     @Column(name = "is_read", nullable = false)
     @Builder.Default

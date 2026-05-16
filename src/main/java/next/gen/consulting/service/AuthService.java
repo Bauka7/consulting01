@@ -43,7 +43,7 @@ public class AuthService {
         String refreshToken = refreshTokenRequest.getRefreshToken();
 
         if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new AuthenticationException("Невалидный refresh token");
+            throw new AuthenticationException("Invalid refresh token");
         }
 
         String username = jwtTokenProvider.getUsernameFromToken(refreshToken);

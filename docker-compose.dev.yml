@@ -1,4 +1,4 @@
-# Development Docker Compose - только базы данных
+# Development Docker Compose - databases only
 services:
   # PostgreSQL Database
   postgres:
@@ -35,4 +35,3 @@ services:
 volumes:
   postgres_data_dev:
   redis_data_dev:
-

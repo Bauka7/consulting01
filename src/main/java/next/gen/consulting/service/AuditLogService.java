@@ -30,9 +30,9 @@ public class AuditLogService {
             
             if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
                 try {
-                    user = userRepository.findByEmail(auth.getName()).orElse(null);
+                    user = userRepository.findByPhone(auth.getName()).orElse(null);
                 } catch (Exception e) {
-                    log.debug("Could not find user for email: {}", auth.getName());
+                    log.debug("Could not find user for phone: {}", auth.getName());
                 }
             }
 

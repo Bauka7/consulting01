@@ -37,7 +37,7 @@ public class Consultant {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
-    // Связи
+    // Relationships
     @OneToMany(mappedBy = "consultant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ContactLink> contactLinks;
     

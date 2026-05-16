@@ -9,9 +9,9 @@ import java.util.UUID;
 @Data
 @Hidden
 public class CreateNotificationDto {
-    @NotBlank(message = "User ID обязателен")
+    @NotBlank(message = "User ID is required")
     private UUID userId;
-    
-    @NotBlank(message = "Сообщение обязательно")
+
+    @NotBlank(message = "Message is required")
     private String message;
 }

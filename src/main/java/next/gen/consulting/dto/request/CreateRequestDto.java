@@ -1,21 +1,23 @@
 package next.gen.consulting.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.UUID;
+
 @Data
 public class CreateRequestDto {
-    @NotBlank(message = "ФИО обязательно")
-    @JsonProperty("full_name")
+    @NotBlank(message = "Full name is required")
     private String fullName;
 
-    @NotBlank(message = "Телефон обязателен")
+    @NotBlank(message = "Phone is required")
     private String phone;
 
-    @NotBlank(message = "Товар обязателен")
+    @NotBlank(message = "Product is required")
     private String product;
-    
-    @NotBlank(message = "Описание обязательно")
+
+    @NotBlank(message = "Description is required")
     private String description;
+
+    private UUID consultantId;
 }

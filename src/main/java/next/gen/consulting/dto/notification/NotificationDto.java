@@ -15,6 +15,7 @@ import java.util.UUID;
 public class NotificationDto {
     private UUID id;
     private UUID userId;
+    private UUID requestId;
     private String message;
     private Boolean isRead;
     private LocalDateTime createdAt;

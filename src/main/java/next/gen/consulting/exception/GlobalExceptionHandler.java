@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 "Unauthorized",
-                "Неверный email или пароль",
+                "Invalid email or password",
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
                 "Access Denied",
-                "У вас нет доступа к этому ресурсу",
+                "You do not have access to this resource",
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler {
         errorResponse.setTimestamp(java.time.LocalDateTime.now());
         errorResponse.setStatus(HttpStatus.BAD_REQUEST.value());
         errorResponse.setError("Validation Failed");
-        errorResponse.setMessage("Ошибка валидации данных");
+        errorResponse.setMessage("Data validation failed");
         errorResponse.setPath(request.getDescription(false).replace("uri=", ""));
         errorResponse.setValidationErrors(errors);
 
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                "Произошла внутренняя ошибка сервера",
+                "An internal server error occurred",
                 request.getDescription(false).replace("uri=", "")
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);

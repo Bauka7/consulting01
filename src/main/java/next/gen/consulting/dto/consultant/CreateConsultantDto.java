@@ -8,11 +8,11 @@ import java.util.UUID;
 
 @Data
 public class CreateConsultantDto {
-    @NotNull(message = "User ID обязателен")
+    @NotNull(message = "User ID is required")
     private UUID userId;
-    
-    @NotBlank(message = "Специализация обязательна")
+
+    @NotBlank(message = "Specialization is required")
     private String specialization;
-    
+
     private String experience;
 }

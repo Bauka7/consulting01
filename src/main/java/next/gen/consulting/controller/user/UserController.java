@@ -66,6 +66,6 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteUser(@PathVariable UUID id) {
         userService.delete(id);
-        return ResponseEntity.ok("Пользователь удален");
+        return ResponseEntity.ok("User deleted");
     }
 }

@@ -1,17 +1,14 @@
 package next.gen.consulting.dto.contactLink;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
 public class CreateContactLinkDto {
 
-    @JsonProperty("service_name")
-    @NotBlank(message = "Название сервиса обязательно")
+    @NotBlank(message = "Service name is required")
     private String serviceName;
 
-    @NotBlank(message = "Ссылка обязательна")
+    @NotBlank(message = "Link is required")
     private String link;
-
 }

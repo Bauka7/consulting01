@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import next.gen.consulting.dto.request.CreateRequestDto;
 import next.gen.consulting.dto.request.RequestDto;
 import next.gen.consulting.dto.request.UpdateRequestDto;
+import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.request.RequestMapper;
 import next.gen.consulting.model.Consultant;
@@ -21,7 +22,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -66,12 +66,19 @@ public class RequestService {
         User client = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
+        Consultant consultant = null;
+        if (requestDto.getConsultantId() != null) {
+            consultant = consultantRepository.findById(requestDto.getConsultantId())
+                    .orElse(null);
+        }
+
         Request request = Request.builder()
                 .fullName(requestDto.getFullName())
                 .phone(requestDto.getPhone())
                 .product(requestDto.getProduct())
                 .description(requestDto.getDescription())
                 .client(client)
+                .consultant(consultant)
                 .status(RequestStatus.PENDING)
                 .build();
 
@@ -90,6 +97,9 @@ public class RequestService {
     @Transactional
     public RequestDto update(UUID id, UpdateRequestDto requestDto) {
         Request request = findById(id);
+        if (request.getStatus() == RequestStatus.COMPLETED || request.getStatus() == RequestStatus.REJECTED) {
+            throw new BadRequestException("Cannot modify a " + request.getStatus().name().toLowerCase() + " request");
+        }
 
         if (requestDto.getFullName() != null) {
             request.setFullName(requestDto.getFullName());
@@ -101,21 +111,41 @@ public class RequestService {
             request.setDescription(requestDto.getDescription());
         }
         if (requestDto.getProduct() != null) {
-            request.setComment(requestDto.getPhone());
+            request.setProduct(requestDto.getProduct());
         }
-        if (requestDto.getConsultantId() != null) {
+        boolean consultantChanged = false;
+        UUID assignedConsultantUserId = null;
+
+        if (Boolean.TRUE.equals(requestDto.getRemoveConsultant())) {
+            request.setConsultant(null);
+            consultantChanged = true;
+        } else if (requestDto.getConsultantId() != null) {
             Consultant consultant = consultantRepository.findById(requestDto.getConsultantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Consultant", "id", requestDto.getConsultantId()));
-            request.setConsultant(consultant);
+            boolean alreadyAssigned = request.getConsultant() != null
+                    && request.getConsultant().getId().equals(consultant.getId());
+            if (!alreadyAssigned) {
+                request.setConsultant(consultant);
+                consultantChanged = true;
+                assignedConsultantUserId = consultant.getUser().getId();
+            }
         }
 
         Request updatedRequest = requestRepository.save(request);
         RequestDto dto = requestMapper.toDto(updatedRequest);
 
-        requestActionChain.process(RequestActionContext.builder()
-                .actionType(RequestActionType.UPDATED)
-                .request(dto)
-                .build());
+        if (consultantChanged && assignedConsultantUserId != null) {
+            requestActionChain.process(RequestActionContext.builder()
+                    .actionType(RequestActionType.CONSULTANT_ASSIGNED)
+                    .request(dto)
+                    .actorId(assignedConsultantUserId)
+                    .build());
+        } else {
+            requestActionChain.process(RequestActionContext.builder()
+                    .actionType(RequestActionType.UPDATED)
+                    .request(dto)
+                    .build());
+        }
 
         return dto;
     }
@@ -127,16 +157,25 @@ public class RequestService {
     }
 
     @Transactional
-    public RequestDto updateStatus(UUID id, RequestStatus status, UUID consultantId, String comment) {
+    public RequestDto updateStatus(UUID id, RequestStatus status, UUID actorId, boolean isAdmin, String comment) {
         Request request = findById(id);
         RequestStatus previousStatus = request.getStatus();
-        request.setStatus(status);
 
-        if (consultantId != null) {
-            Consultant consultant = consultantRepository.findByUserId(consultantId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Consultant", "id", consultantId));
+        if (previousStatus == RequestStatus.COMPLETED || previousStatus == RequestStatus.REJECTED) {
+            throw new BadRequestException(
+                    "Cannot change status of a " + previousStatus.name().toLowerCase() + " request");
+        }
+
+        if (!isAdmin) {
+            Consultant consultant = consultantRepository.findByUserId(actorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", actorId));
+            if (request.getConsultant() != null && !request.getConsultant().getId().equals(consultant.getId())) {
+                throw new BadRequestException("You are not assigned to this request");
+            }
             request.setConsultant(consultant);
         }
+
+        request.setStatus(status);
 
         if (comment != null) {
             request.setComment(comment);
@@ -149,7 +188,7 @@ public class RequestService {
                 .actionType(RequestActionType.STATUS_CHANGED)
                 .request(dto)
                 .previousStatus(previousStatus)
-                .actorId(consultantId)
+                .actorId(actorId)
                 .build());
 
         return dto;

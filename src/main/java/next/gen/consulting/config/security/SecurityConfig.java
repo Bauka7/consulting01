@@ -41,14 +41,15 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/auth/**",
                     "/api/public/**",
+                    "/api/consultants",
+                    "/api/consultants/**",
+                    "/api/contact-links/user/**",
+                    "/api/achievements/user/**",
                     "/actuator/health",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/error"
                 ).permitAll()
-                .requestMatchers("/api/client/**").hasAnyRole("CLIENT", "ADMIN")
-                .requestMatchers("/api/consultant/**").hasAnyRole("CONSULTANT", "ADMIN")
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

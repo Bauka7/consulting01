@@ -1,298 +1,352 @@
 # NextGen Consulting Platform
 
-Платформа для онлайн-консультаций с системой ролей и JWT аутентификацией.
+A platform for online consultations with role-based access control and JWT authentication.
 
-## Технологии
+## Technologies
 
-- **Spring Boot 3.5.7** - фреймворк для создания микросервисов
-- **Spring Security** - аутентификация и авторизация с JWT
-- **JWT** - токены для безопасной аутентификации
-- **JPA/Hibernate** - ORM для работы с базой данных
-- **PostgreSQL** - реляционная база данных
-- **Flyway** - управление миграциями базы данных
-- **Lombok** - упрощение кода через аннотации
-- **Bean Validation** - валидация входных данных
-- **MapStruct** - автоматическая генерация мапперов между Entity и DTO
-- **Clean Architecture** - разделение на слои (Controller -> Service -> Repository)
-- **JUnit 5** + **Mockito** - для unit и integration тестирования
-- **H2** - in-memory база для тестов
-- **Spring Boot Actuator** - мониторинг и управление приложением
-- **Swagger/OpenAPI** - документация API с аннотациями на интерфейсах
-- **Audit Logging** - логирование важных операций
-- **Docker & Docker Compose** - контейнеризация и оркестрация сервисов
+- **Spring Boot 3.5.7** for building the backend application
+- **Spring Security** for authentication and authorization
+- **JWT** for secure access and refresh tokens
+- **JPA/Hibernate** for ORM and database access
+- **PostgreSQL** as the primary relational database
+- **Flyway** for database migrations
+- **Lombok** for reducing boilerplate
+- **Bean Validation** for request validation
+- **MapStruct** for DTO and entity mapping
+- **Clean Architecture** for clear application layering
+- **JUnit 5** and **Mockito** for testing
+- **H2** for in-memory tests
+- **Spring Boot Actuator** for monitoring and health checks
+- **Swagger / OpenAPI** for interactive API documentation
+- **Audit Logging** for tracking important actions
+- **Docker & Docker Compose** for containerized development and deployment
 
-## Архитектура
+## Architecture
 
-Проект построен по принципам Clean Architecture:
+The project follows Clean Architecture principles:
 
-```
-┌─────────────────────────────────────────┐
-│         Controller Layer                │  ← REST API эндпойнты
-│   (HTTP handling, returns DTOs)        │
-│   implements ControllerApi interface    │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│   Controller API Interfaces             │  ← Swagger/OpenAPI docs
-│  (All @Operation, @ApiResponse annot.) │
-└─────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│         Service Layer                   │  ← Бизнес-логика
-│  (Validation, rules, calls Mapper)     │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│      Mapper Layer (MapStruct)           │  ← Auto-generated
-│  (Entity <-> DTO transformation)       │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│      Repository Layer                   │  ← Доступ к данным
-│  (JPA repositories, queries)           │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│      Database (PostgreSQL)              │
-└─────────────────────────────────────────┘
+```text
+Controller Layer
+  -> handles HTTP requests and responses
+  -> returns DTOs
+  -> implements API contract interfaces
+
+Service Layer
+  -> contains business rules and validation
+
+Mapper Layer
+  -> transforms entities and DTOs
+
+Repository Layer
+  -> works with the database through JPA
+
+Database
+  -> PostgreSQL
 ```
 
-### Слои:
+### Layers
 
-1. **Controller API Interfaces** - интерфейсы с Swagger аннотациями для документации
-2. **Controller** - только HTTP обработка, возврат DTO, реализует API интерфейсы
-3. **Service** - вся бизнес-логика, валидация, использование Mapper для трансформации
-4. **Mapper** - MapStruct интерфейсы для автоматической конвертации Entity <-> DTO
-5. **Repository** - доступ к данным через JPA
-6. **Model** - JPA entities (не возвращаются напрямую в API)
-7. **DTO** - объекты передачи данных (возвращаются в API)
+1. **Controller API Interfaces** define Swagger/OpenAPI contracts.
+2. **Controllers** handle HTTP concerns only.
+3. **Services** contain business logic and validation.
+4. **Mappers** convert entities to DTOs and back.
+5. **Repositories** provide persistence access through JPA.
+6. **Models** are JPA entities and are not returned directly from the API.
+7. **DTOs** are used for API input and output.
 
-### Преимущества:
+### Benefits
 
-✅ **Разделение ответственности** - каждый слой отвечает только за свою задачу  
-✅ **Тестируемость** - легко мокировать слои  
-✅ **Безопасность** - Entities не возвращаются напрямую  
-✅ **Maintainability** - легче поддерживать и расширять  
-✅ **Производительность** - MapStruct генерирует оптимальный код на этапе компиляции  
-✅ **Type Safety** - нет ручных маппингов, меньше ошибок  
-✅ **Null Safety** - автоматическая обработка null значений
+- Clear separation of responsibilities
+- Better testability
+- Safer API boundaries
+- Easier maintenance and extension
+- Compile-time mapper generation with MapStruct
+- Strong type safety
+- Better null-handling support
 
-## Настройка и запуск
+## Creating the Admin Account
 
-### Вариант 1: Docker Compose (рекомендуется)
+The admin account does not exist by default and must be created manually via SQL after the application has started at least once (so Flyway migrations run and the `users` table is created).
 
-Запуск всего приложения с базами данных одной командой:
+### Step 1 — Generate a BCrypt hash for your password
 
+Use any BCrypt generator (cost factor 10) for your desired password. Example for `Admin@123`:
+
+```
+$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
+```
+
+Or generate one with Java:
 ```bash
-# Запустить все сервисы (PostgreSQL, Redis, приложение)
-docker-compose up -d
-
-# Посмотреть логи
-docker-compose logs -f app
-
-# Остановить все сервисы
-docker-compose down
-
-# Остановить и удалить все данные
-docker-compose down -v
+# In the Spring Boot app console (Swagger or test endpoint)
+# Or use: https://bcrypt-generator.com  (rounds = 10)
 ```
 
-**Приложение будет доступно по адресу:** http://localhost:8080
+### Step 2 — Insert the admin user via SQL
 
-### Вариант 2: Разработка с локальными базами
-
-Запуск только баз данных в Docker, приложение локально:
-
+Connect to PostgreSQL:
 ```bash
-# Запустить только PostgreSQL и Redis
-docker-compose -f docker-compose.dev.yml up -d
-
-# Запустить приложение локально
-./gradlew bootRun
-```
-
-### Вариант 3: Полностью локально
-
-1. Установите PostgreSQL и Redis
-2. Создайте базу данных:
-```sql
-CREATE DATABASE consulting_db;
-CREATE USER consulting_user WITH PASSWORD 'consulting_password';
-GRANT ALL PRIVILEGES ON DATABASE consulting_db TO consulting_user;
-```
-3. Обновите настройки в `application.properties` при необходимости
-4. Запустите приложение:
-```bash
-./gradlew bootRun
-```
-
-**Приложение будет доступно по адресу:** http://localhost:8080
-
-### Полезные команды Docker
-
-```bash
-# Проверить статус всех сервисов
-docker-compose ps
-
-# Посмотреть логи конкретного сервиса
-docker-compose logs -f postgres
-docker-compose logs -f redis
-docker-compose logs -f app
-
-# Пересобрать приложение после изменений
-docker-compose build app
-docker-compose up -d app
-
-# Войти в контейнер PostgreSQL
+# If running via Docker
 docker exec -it consulting_postgres psql -U consulting_user -d consulting_db
 
-# Войти в контейнер Redis
-docker exec -it consulting_redis redis-cli
+# If running locally
+psql -U consulting_user -d consulting_db
+```
 
-# Очистить все и начать заново
-docker-compose down -v
-docker-compose up -d
+Run the INSERT:
+```sql
+INSERT INTO users (id, full_name, phone, password_hash, role)
+VALUES (
+  uuid_generate_v4(),
+  'Admin User',
+  '+70000000001',
+  '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+  'ADMIN'
+);
+```
+
+> The hash above is for password `password`. Replace it with your own BCrypt hash.
+
+### Step 3 — Log in
+
+```
+Phone:    +70000000001
+Password: password   (or whatever password you hashed)
+```
+
+### Notes
+
+- The public `POST /api/auth/register` endpoint only allows `CLIENT` and `CONSULTANT` roles — it will never create an ADMIN through the UI, which is intentional for security.
+- To change the admin's password later, generate a new BCrypt hash and run:
+  ```sql
+  UPDATE users SET password_hash = '<new_hash>' WHERE phone = '+70000000001';
+  ```
+- To create additional admins, repeat Step 2 with a different phone number.
+
+---
+
+## Setup and Run
+
+The project consists of two parts:
+- **Backend** — Spring Boot API (`localhost:8080`)
+- **Frontend** — React/Vite app (`localhost:5173`)
+
+---
+
+### Step 1 — Start the Backend
+
+#### Option A: Full Docker (recommended)
+
+Builds and starts PostgreSQL, Redis, and the Spring Boot app:
+
+```powershell
+# Build and start all services
+docker compose build app
+docker compose up -d
+
+# View backend logs
+docker compose logs -f app
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (resets the database)
+docker compose down -v
+```
+
+Backend available at `http://localhost:8080`.
+
+#### Option B: Local App + Docker Databases
+
+Run only the databases in Docker and start the app locally:
+
+```powershell
+# Start PostgreSQL and Redis only
+docker compose -f docker-compose.dev.yml up -d
+
+# Run the backend locally (requires Java 17+)
+./gradlew bootRun
+```
+
+---
+
+### Step 2 — Start the Frontend
+
+```powershell
+cd frontend
+npm install      # first time only
+npm run dev
+```
+
+Frontend available at `http://localhost:5173`.
+
+> The frontend proxies API requests to `http://localhost:8080` automatically.
+
+---
+
+### Useful Docker Commands
+
+```powershell
+# Check service status
+docker compose ps
+
+# View logs for a specific service
+docker compose logs -f app
+docker compose logs -f postgres
+
+# Rebuild the backend after code changes
+docker compose build app
+docker compose up -d app
+
+# Open a PostgreSQL shell
+docker exec -it consulting_postgres psql -U consulting_user -d consulting_db
+
+# Open a Redis shell
+docker exec -it consulting_redis redis-cli
 ```
 
 ## API Endpoints
 
-### Аутентификация
+### Authentication
 
-- `POST /api/auth/register` - регистрация пользователя (тело: email, password, fullName, phone)
-- `POST /api/auth/login` - вход в систему (возвращает access + refresh token)
-- `POST /api/auth/refresh` - обновить access token используя refresh token
-- `POST /api/auth/logout` - выход из системы
+- `POST /api/auth/register` - register a user
+- `POST /api/auth/login` - sign in and receive access and refresh tokens
+- `POST /api/auth/refresh` - refresh the access token
+- `POST /api/auth/logout` - sign out
 
-### Пользователи
+### Users
 
-- `GET /api/users/profile` - получить профиль текущего пользователя
-- `PUT /api/users/profile` - обновить профиль текущего пользователя
-- `GET /api/users` - получить всех пользователей (только для админов)
-- `GET /api/users/{id}` - получить пользователя по ID (только для админов)
-- `PUT /api/users/{id}/role` - изменить роль пользователя (только для админов)
-- `DELETE /api/users/{id}` - удалить пользователя (только для админов)
+- `GET /api/users/profile` - get the current user's profile
+- `PUT /api/users/profile` - update the current user's profile
+- `GET /api/users` - get all users, admin only
+- `GET /api/users/{id}` - get a user by ID, admin only
+- `PUT /api/users/{id}/role` - change a user role, admin only
+- `DELETE /api/users/{id}` - delete a user, admin only
 
-### Запросы (Requests)
+### Requests
 
-- `POST /api/requests` - создать запрос (для клиентов)
-- `GET /api/requests` - получить все запросы (только для админов)
-- `GET /api/requests/my` - получить мои запросы
-- `GET /api/requests/pending` - получить ожидающие запросы (для консультантов)
-- `GET /api/requests/{id}` - получить запрос по ID
-- `PUT /api/requests/{id}` - обновить запрос
-- `PUT /api/requests/{id}/status` - обновить статус запроса (для консультантов)
-- `DELETE /api/requests/{id}` - удалить запрос
+- `POST /api/requests` - create a request, client only
+- `GET /api/requests` - get all requests, admin only
+- `GET /api/requests/my` - get my requests
+- `GET /api/requests/pending` - get pending requests, consultant only
+- `GET /api/requests/{id}` - get a request by ID
+- `PUT /api/requests/{id}` - update a request
+- `PUT /api/requests/{id}/status` - update request status, consultant only
+- `DELETE /api/requests/{id}` - delete a request
 
-### Консультанты (Consultants)
+### Consultants
 
-- `POST /api/consultants` - создать консультанта (только для админов)
-- `GET /api/consultants` - получить всех консультантов
-- `GET /api/consultants/{id}` - получить консультанта по ID
-- `GET /api/consultants/by-user/{userId}` - получить консультанта по User ID
-- `PUT /api/consultants/{id}` - обновить консультанта
-- `DELETE /api/consultants/{id}` - удалить консультанта (только для админов)
+- `POST /api/consultants` - create a consultant, admin only
+- `GET /api/consultants` - get all consultants
+- `GET /api/consultants/{id}` - get a consultant by ID
+- `GET /api/consultants/by-user/{userId}` - get a consultant by user ID
+- `PUT /api/consultants/{id}` - update a consultant
+- `DELETE /api/consultants/{id}` - delete a consultant, admin only
 
-### Контактные ссылки (Contact Links)
+### Contact Links
 
-- `POST /api/contact-links` - создать контактную ссылку (для консультантов)
-- `GET /api/contact-links` - получить все ссылки (только для админов)
-- `GET /api/contact-links/consultant/{consultantId}` - получить ссылки консультанта
-- `GET /api/contact-links/{id}` - получить ссылку по ID
-- `PUT /api/contact-links/{id}` - обновить ссылку
-- `DELETE /api/contact-links/{id}` - удалить ссылку
+- `POST /api/contact-links` - create a contact link, consultant only
+- `GET /api/contact-links` - get all contact links, admin only
+- `GET /api/contact-links/consultant/{consultantId}` - get consultant contact links
+- `GET /api/contact-links/{id}` - get a contact link by ID
+- `PUT /api/contact-links/{id}` - update a contact link
+- `DELETE /api/contact-links/{id}` - delete a contact link
 
-### Уведомления (Notifications)
+### Notifications
 
-- `POST /api/notifications` - создать уведомление (только для админов)
-- `GET /api/notifications` - получить мои уведомления
-- `GET /api/notifications/unread` - получить непрочитанные уведомления
-- `GET /api/notifications/{id}` - получить уведомление по ID
-- `PUT /api/notifications/{id}/read` - отметить как прочитанное
-- `PUT /api/notifications/{id}` - обновить уведомление (только для админов)
-- `DELETE /api/notifications/{id}` - удалить уведомление
-- `DELETE /api/notifications/user/{userId}` - удалить все уведомления пользователя (только для админов)
+- `POST /api/notifications` - create a notification, admin only
+- `GET /api/notifications` - get my notifications
+- `GET /api/notifications/unread` - get unread notifications
+- `GET /api/notifications/{id}` - get a notification by ID
+- `PUT /api/notifications/{id}/read` - mark a notification as read
+- `PUT /api/notifications/{id}` - update a notification, admin only
+- `DELETE /api/notifications/{id}` - delete a notification
+- `DELETE /api/notifications/user/{userId}` - delete all notifications for a user, admin only
 
-### Достижения (Achievements)
+### Achievements
 
-- `POST /api/achievements` - создать достижение (только для админов)
-- `GET /api/achievements` - получить все достижения (только для админов)
-- `GET /api/achievements/my` - получить мои достижения
-- `GET /api/achievements/user/{userId}` - получить достижения пользователя
-- `GET /api/achievements/{id}` - получить достижение по ID
-- `PUT /api/achievements/{id}` - обновить достижение (только для админов)
-- `DELETE /api/achievements/{id}` - удалить достижение (только для админов)
+- `POST /api/achievements` - create an achievement, admin only
+- `GET /api/achievements` - get all achievements, admin only
+- `GET /api/achievements/my` - get my achievements
+- `GET /api/achievements/user/{userId}` - get a user's achievements
+- `GET /api/achievements/{id}` - get an achievement by ID
+- `PUT /api/achievements/{id}` - update an achievement, admin only
+- `DELETE /api/achievements/{id}` - delete an achievement, admin only
 
-## Роли пользователей
+## User Roles
 
-- **CLIENT** - клиент, может создавать запросы
-- **CONSULTANT** - консультант, может обрабатывать запросы
-- **ADMIN** - администратор, полный доступ
+- **CLIENT** can create consultation requests
+- **CONSULTANT** can process requests
+- **ADMIN** has full system access
 
-## Структура базы данных
+## Database Structure
 
-### Основные таблицы:
-- `users` - пользователи системы
-- `consultants` - консультанты (связаны с users)
-- `requests` - запросы на консультации
-- `notifications` - уведомления
-- `achievements` - достижения пользователей
-- `user_sessions` - сессии пользователей
-- `audit_logs` - логи аудита
-- `contact_links` - контактные ссылки консультантов
+### Main Tables
 
-## Безопасность
+- `users`
+- `consultants`
+- `requests`
+- `notifications`
+- `achievements`
+- `user_sessions`
+- `audit_logs`
+- `contact_links`
 
-- JWT токены для аутентификации
-- Роли и права доступа через Spring Security
-- CORS настроен для всех источников
-- Пароли хешируются с помощью BCrypt
-- Пароли не возвращаются в JSON ответах
+## Security
 
-## Обработка ошибок
+- JWT-based authentication
+- Role-based access control through Spring Security
+- CORS enabled for configured origins
+- BCrypt password hashing
+- Passwords are never returned in JSON responses
 
-API возвращает стандартизированные ответы об ошибках:
+## Error Handling
+
+The API returns standardized error responses:
 
 ```json
 {
   "timestamp": "2024-01-15T10:30:00",
   "status": 404,
   "error": "Resource Not Found",
-  "message": "User не найден с id : '123e4567-e89b-12d3-a456-426614174000'",
+  "message": "User not found with id: '123e4567-e89b-12d3-a456-426614174000'",
   "path": "/api/users/123e4567-e89b-12d3-a456-426614174000"
 }
 ```
 
-Для ошибок валидации также возвращаются детали:
+Validation failures also include field details:
 
 ```json
 {
   "timestamp": "2024-01-15T10:30:00",
   "status": 400,
   "error": "Validation Failed",
-  "message": "Ошибка валидации данных",
+  "message": "Data validation failed",
   "path": "/api/auth/register",
   "validationErrors": {
-    "email": "Email должен быть валидным",
-    "password": "Пароль должен быть от 6 до 20 символов"
+    "email": "Email must be valid",
+    "password": "Password must be between 6 and 20 characters"
   }
 }
 ```
 
-## Пример использования
+## Usage Examples
 
-### 1. Регистрация пользователя
+### 1. Register a User
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
     "password": "password123",
-    "fullName": "Иван Иванов",
+    "fullName": "John Smith",
     "phone": "+79991234567"
   }'
 ```
 
-### 2. Вход в систему (получаем access и refresh токены)
+### 2. Sign In
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -302,7 +356,8 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
-**Ответ:**
+Response:
+
 ```json
 {
   "accessToken": "eyJhbGc...",
@@ -311,7 +366,8 @@ curl -X POST http://localhost:8080/api/auth/login \
 }
 ```
 
-### 3. Обновление токена (refresh)
+### 3. Refresh Token
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/refresh \
   -H "Content-Type: application/json" \
@@ -320,68 +376,65 @@ curl -X POST http://localhost:8080/api/auth/refresh \
   }'
 ```
 
-### 4. Выход из системы
+### 4. Sign Out
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/logout \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-### 5. Получение профиля (с токеном)
+### 5. Get Profile
+
 ```bash
 curl -X GET http://localhost:8080/api/users/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-### 6. Создание запроса
+### 6. Create a Request
+
 ```bash
 curl -X POST http://localhost:8080/api/requests \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Нужна консультация по Spring Boot",
-    "description": "Хочу изучить Spring Boot с нуля"
+    "title": "Need help with Spring Boot",
+    "description": "I want to learn Spring Boot from scratch"
   }'
 ```
 
-### 7. Обновление статуса запроса (для консультантов)
+### 7. Update Request Status
+
 ```bash
-curl -X PUT "http://localhost:8080/api/requests/{id}/status?status=COMPLETED&comment=Работа выполнена" \
+curl -X PUT "http://localhost:8080/api/requests/{id}/status?status=COMPLETED&comment=Work completed" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-## Миграции
+## Migrations
 
-Миграции Flyway автоматически выполняются при запуске приложения. Файл миграции находится в `src/main/resources/db/migration/V1__create_nextgen_schema.sql`.
+Flyway migrations run automatically when the application starts. The initial migration file is located at `src/main/resources/db/migration/V1__create_nextgen_schema.sql`.
 
-## MapStruct Мапперы
+## MapStruct
 
-Проект использует MapStruct для автоматической генерации мапперов между Entity и DTO. Все мапперы генерируются на этапе компиляции.
+The project uses MapStruct to generate entity and DTO mappers at compile time.
 
-### Пример использования:
+### Example
 
 ```java
 @Service
 public class UserService {
-    private final UserMapper userMapper; // Внедряется Spring
-    
+    private final UserMapper userMapper;
+
     public UserDto getUser(UUID id) {
         User entity = repository.findById(id);
-        return userMapper.toDto(entity); // Автоматический маппинг
+        return userMapper.toDto(entity);
     }
 }
 ```
 
-### Преимущества:
+### Generated Mappers
 
-- ✅ Генерация кода на этапе компиляции (нулевые накладные расходы в runtime)
-- ✅ Type-safe маппинг (ошибки обнаруживаются при компиляции)
-- ✅ Автоматическая обработка null значений
-- ✅ Поддержка кастомных маппингов через аннотации `@Mapping`
-- ✅ Интеграция с Lombok
+Generated implementations are available under `build/generated/sources/annotationProcessor/`, for example:
 
-### Сгенерированные мапперы:
-
-Все реализации мапперов находятся в `build/generated/sources/annotationProcessor/`:
 - `UserMapperImpl.java`
 - `ConsultantMapperImpl.java`
 - `RequestMapperImpl.java`
@@ -389,115 +442,80 @@ public class UserService {
 - `ContactLinkMapperImpl.java`
 - `AchievementMapperImpl.java`
 
-## Тестирование
+## Testing
 
-Проект включает полный набор тестов:
+The project includes unit and integration tests.
 
-### Unit тесты
-- **UserServiceTest** - тесты сервисов с мокинг-зависимостями
-- Используется Mockito для изоляции компонентов
-- H2 in-memory база для быстрых тестов
-
-### Integration тесты
-- **AuthControllerTest** - тесты REST контроллеров
-- **SecurityTest** - тесты безопасности и CORS
-- Полная интеграция со Spring контекстом
-
-### Запуск тестов
+### Run Tests
 
 ```bash
-# Запустить все тесты
+# Run all tests
 ./gradlew test
 
-# Запустить только unit тесты
+# Run only service tests
 ./gradlew test --tests "*ServiceTest"
 
-# Запустить только integration тесты
+# Run only controller tests
 ./gradlew test --tests "*ControllerTest"
-
-# Генерация отчета
-./gradlew test
-# Отчет в: build/reports/tests/test/index.html
 ```
 
-### Покрытие кода
+Test reports are generated in `build/reports/tests/test/index.html`.
 
-Проект включает:
-- ✅ Unit тесты для всех сервисов
-- ✅ Integration тесты для контроллеров
-- ✅ Security тесты для проверки доступа
-- ✅ 95%+ покрытие критичных компонентов
+## Swagger / OpenAPI
 
-## Swagger/OpenAPI Документация
+Interactive API documentation is available at:
 
-Полная интерактивная документация API доступна по адресу:
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
-### Особенности:
-- ✅ Все эндпойнты документированы с описаниями
-- ✅ JWT Bearer аутентификация встроена
-- ✅ Примеры запросов и ответов
-- ✅ Интерактивное тестирование API
-- ✅ Swagger аннотации вынесены в интерфейсы контроллеров (API Contracts)
-- ✅ Чистая архитектура: интерфейсы для документации + реализации
+## Monitoring
 
-## Мониторинг и Health Checks
+Spring Boot Actuator endpoints:
 
-### Actuator Endpoints
+- `GET /actuator/health`
+- `GET /actuator/metrics`
+- `GET /actuator/info`
 
-- `GET /actuator/health` - проверка состояния приложения
-- `GET /actuator/metrics` - метрики приложения
-- `GET /actuator/info` - информация о приложении
+## Logging
 
-### Логирование
+Application logs are stored in `logs/consulting.log`.
 
-Все логи хранятся в файле `logs/consulting.log`:
-- Ротация каждые 10MB
-- Хранение 30 дней истории
-- DEBUG уровень для разработки
-- Производственные логи на уровне INFO
+Audit logs capture critical actions such as:
 
-## Audit Logging
+- successful sign-ins
+- registrations
+- user data changes
+- security events
+- request IP addresses
+- operation timestamps
 
-Все критичные операции логируются в таблицу `audit_logs`:
-- ✅ Входы в систему (LOGIN)
-- ✅ Регистрации (REGISTER)
-- ✅ Изменения данных пользователей
-- ✅ Security события
-- ✅ IP адреса запросов
-- ✅ Timestamp всех операций
-
-### Использование:
+Example usage:
 
 ```java
 @Autowired
 private AuditLogService auditLogService;
 
-// Логирование операции
 auditLogService.logUserAction("LOGIN", "User logged in successfully");
-
-// Логирование сущности
 auditLogService.logEntityAction("UPDATE", "User", userId);
-
-// Security события
 auditLogService.logSecurityEvent("FAILED_LOGIN", "Invalid credentials");
 ```
 
-## Docker & Контейнеризация
+## Docker
 
-Проект полностью готов к развертыванию в Docker:
+The project is ready for Docker-based deployment.
 
-### Файлы:
-- **`Dockerfile`** - multi-stage build для Spring Boot приложения
-- **`docker-compose.yml`** - полный стек (PostgreSQL + Redis + приложение)
-- **`docker-compose.dev.yml`** - только базы данных для разработки
-- **`.dockerignore`** - оптимизация размера образа
+### Files
 
-### Возможности:
-- ✅ Multi-stage build для оптимизации размера
-- ✅ Health checks для всех сервисов
-- ✅ Автоматические миграции Flyway при запуске
-- ✅ Persistent volumes для данных
-- ✅ Изолированная сеть для сервисов
-- ✅ Безопасность: non-root пользователь в контейнере
+- `Dockerfile` for the multi-stage Spring Boot image build
+- `docker-compose.yml` for the full stack
+- `docker-compose.dev.yml` for development databases only
+- `.dockerignore` for image size optimization
+
+### Highlights
+
+- multi-stage build
+- health checks
+- automatic Flyway migrations
+- persistent volumes
+- isolated service network
+- non-root runtime user

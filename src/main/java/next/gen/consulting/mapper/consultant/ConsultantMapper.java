@@ -10,5 +10,6 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface ConsultantMapper {
     
     @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "fullName", source = "user.fullName")
     ConsultantDto toDto(Consultant consultant);
 }

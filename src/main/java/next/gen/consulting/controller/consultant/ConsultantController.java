@@ -40,14 +40,15 @@ public class ConsultantController {
         return ResponseEntity.ok(consultants);
     }
 
+    // Search by name through a query parameter to avoid conflicting with /{id}
+    @GetMapping("/search")
+    public ResponseEntity<List<ConsultantDto>> searchConsultants(@RequestParam(required = false) String name) {
+        return ResponseEntity.ok(consultantService.search(name));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ConsultantDto> getConsultantById(@PathVariable UUID id) {
         return ResponseEntity.ok(consultantService.getById(id));
-    }
-
-    @GetMapping("/{name}")
-    public ResponseEntity<List<ConsultantDto>> getConsultantById(@PathVariable String name) {
-        return ResponseEntity.ok(consultantService.search(name));
     }
 
     @GetMapping("/by-user/{userId}")
@@ -55,19 +56,19 @@ public class ConsultantController {
         return ResponseEntity.ok(consultantService.getByUserId(userId));
     }
 
-    @PutMapping("/{id}")
+    // A consultant edits their own profile: resolve consultantId via userId from the token
+    @PutMapping("/my")
     @PreAuthorize("hasAnyRole('CONSULTANT')")
-    public ResponseEntity<ConsultantDto> updateConsultant(
+    public ResponseEntity<ConsultantDto> updateMyConsultant(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @RequestBody UpdateConsultantDto updateRequest) {
-        return ResponseEntity.ok(consultantService.update(principal.getId(), updateRequest));
+        return ResponseEntity.ok(consultantService.updateByUserId(principal.getId(), updateRequest));
     }
 
-    
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteConsultant(@PathVariable UUID id) {
         consultantService.delete(id);
-        return ResponseEntity.ok("Консультант удален");
+        return ResponseEntity.ok("Consultant deleted");
     }
 }

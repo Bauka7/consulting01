@@ -3,6 +3,7 @@ package next.gen.consulting.service;
 import lombok.RequiredArgsConstructor;
 import next.gen.consulting.model.User;
 import next.gen.consulting.repository.UserRepository;
+import next.gen.consulting.util.PhoneNormalizer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,8 +23,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional
     public CustomUserPrincipal loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByPhone(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with phone: " + username));
+        String normalized = PhoneNormalizer.normalizeForStorage(username);
+        var candidates = PhoneNormalizer.buildLookupCandidates(username);
+        User user = userRepository.findFirstByPhoneIn(candidates)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with phone: " + normalized));
 
         return new CustomUserPrincipal(
                 user.getId(),

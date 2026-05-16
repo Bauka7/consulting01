@@ -55,12 +55,13 @@ public class NotificationController {
     @PreAuthorize("hasAnyRole('CLIENT', 'CONSULTANT', 'ADMIN')")
     public ResponseEntity<String> deleteNotification(@PathVariable UUID id) {
         notificationService.delete(id);
-        return ResponseEntity.ok("Уведомление удалено");
+        return ResponseEntity.ok("Notification deleted");
     }
 
     @DeleteMapping
+    @PreAuthorize("hasAnyRole('CLIENT', 'CONSULTANT', 'ADMIN')")
     public ResponseEntity<String> deleteAllUserNotifications(@AuthenticationPrincipal CustomUserPrincipal principal) {
         notificationService.deleteAllByUserId(principal.getId());
-        return ResponseEntity.ok("Все уведомления пользователя удалены");
+        return ResponseEntity.ok("All user notifications deleted");
     }
 }

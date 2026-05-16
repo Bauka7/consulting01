@@ -10,5 +10,6 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface NotificationMapper {
     
     @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "requestId", source = "requestId")
     NotificationDto toDto(Notification notification);
 }

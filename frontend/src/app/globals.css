@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #0F172A;
+    --accent: #3B82F6;
+    --gold: #F59E0B;
+    --success: #10B981;
+    --danger: #EF4444;
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --text: #0F172A;
+    --muted: #64748B;
+    --border: #E2E8F0;
+  }
+
+  .dark {
+    --bg: #0F172A;
+    --card: #1E293B;
+    --text: #F8FAFC;
+    --muted: #94A3B8;
+    --border: #334155;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-bg text-text-main font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  .dark body {
+    background-color: var(--bg);
+    color: var(--text);
+  }
+}
+
+@layer components {
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .sidebar-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: white;
+  }
+
+  .sidebar-link.active {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60A5FA;
+  }
+
+  .stat-card {
+    @apply bg-card rounded-xl border border-border p-5 flex flex-col gap-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply border border-border text-text-main px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-danger/90 transition-colors;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent bg-white;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-text-main mb-1.5;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

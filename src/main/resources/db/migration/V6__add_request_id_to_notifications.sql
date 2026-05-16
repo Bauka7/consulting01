@@ -1,0 +1,1 @@
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS request_id UUID REFERENCES requests(id) ON DELETE SET NULL;

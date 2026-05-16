@@ -5,11 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import next.gen.consulting.dto.request.RequestDto;
 import next.gen.consulting.model.RequestStatus;
 import next.gen.consulting.service.NotificationService;
-import org.springframework.core.annotation.Order;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
+
 
 @Component
 @RequiredArgsConstructor
@@ -26,16 +27,31 @@ public class RequestClientNotificationHandler extends AbstractRequestActionHandl
             return;
         }
 
+        UUID requestId = request.getId();
+
         switch (context.getActionType()) {
             case CREATED -> notifyClient(
                     request.getClientId(),
-                    "Ваша заявка \"" + request.getDescription().substring(0,15) + "...\" успешно создана и ожидает обработки."
+                    "Your request \"" + request.getProduct() + "\" was created successfully and is awaiting review.",
+                    requestId
+            );
+            case CONSULTANT_ASSIGNED -> notifyClient(
+                    request.getClientId(),
+                    "A consultant has been assigned to your request \"" + request.getProduct() + "\".",
+                    requestId
             );
             case STATUS_CHANGED -> {
                 RequestStatus newStatus = request.getStatus();
+                String statusLabel = switch (newStatus) {
+                    case PROGRESS -> "In Progress";
+                    case COMPLETED -> "Completed";
+                    case REJECTED -> "Rejected";
+                    default -> newStatus.name();
+                };
                 notifyClient(
                         request.getClientId(),
-                        "Статус вашей заявки \"" + request.getDescription().substring(0,15) + "...\" изменён на " + newStatus + "."
+                        "Your request \"" + request.getProduct() + "\" status changed to: " + statusLabel + ".",
+                        requestId
                 );
             }
             default -> {
@@ -43,12 +59,12 @@ public class RequestClientNotificationHandler extends AbstractRequestActionHandl
         }
     }
 
-    private void notifyClient(UUID clientId, String message) {
+    private void notifyClient(UUID clientId, String message, UUID requestId) {
         try {
-            notificationService.createNotification(clientId, message);
+            notificationService.createNotification(clientId, message, requestId);
         } catch (Exception ex) {
             log.error("Failed to create notification for client {}: {}", clientId, ex.getMessage(), ex);
         }
     }
-}
 
+}

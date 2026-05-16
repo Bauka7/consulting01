@@ -44,8 +44,10 @@ public class ConsultantService {
         String query = userName == null ? "" : userName.trim();
 
         List<Consultant> consultants = query.isEmpty()
-                ? consultantRepository.findAll()
-                : consultantRepository.findByUserFullNameContainingIgnoreCase(query);
+                ? consultantRepository.findByUserRole(UserRole.CONSULTANT)
+                : consultantRepository.findByUserFullNameContainingIgnoreCase(query).stream()
+                        .filter(c -> UserRole.CONSULTANT.equals(c.getUser().getRole()))
+                        .toList();
 
         return consultants.stream()
                 .map(consultantMapper::toDto)
@@ -53,7 +55,7 @@ public class ConsultantService {
     }
 
     public Page<ConsultantDto> getAll(Pageable pageable) {
-        return consultantRepository.findAll(pageable)
+        return consultantRepository.findByUserRole(UserRole.CONSULTANT, pageable)
                 .map(consultantMapper::toDto);
     }
 
@@ -62,11 +64,14 @@ public class ConsultantService {
         User user = userRepository.findById(consultantDto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", consultantDto.getUserId()));
 
-        if (UserRole.CONSULTANT.equals(user.getRole())) {
-            throw new BadRequestException("Пользователь уже является консультантом");
+        if (consultantRepository.findByUserId(user.getId()).isPresent()) {
+            throw new BadRequestException("Consultant profile already exists for this user");
         }
 
-        user.setRole(UserRole.CONSULTANT);
+        if (!UserRole.CONSULTANT.equals(user.getRole())) {
+            user.setRole(UserRole.CONSULTANT);
+            userRepository.save(user);
+        }
 
         Consultant consultant = Consultant.builder()
                 .user(user)
@@ -74,29 +79,55 @@ public class ConsultantService {
                 .experience(consultantDto.getExperience())
                 .build();
 
-        Consultant savedConsultant = consultantRepository.save(consultant);
-        return consultantMapper.toDto(savedConsultant);
+        return consultantMapper.toDto(consultantRepository.save(consultant));
+    }
+
+    @Transactional
+    public ConsultantDto createEmpty(User user) {
+        if (consultantRepository.findByUserId(user.getId()).isPresent()) {
+            return consultantMapper.toDto(consultantRepository.findByUserId(user.getId()).get());
+        }
+        Consultant consultant = Consultant.builder()
+                .user(user)
+                .specialization("")
+                .experience("")
+                .build();
+        return consultantMapper.toDto(consultantRepository.save(consultant));
+    }
+
+    // Update by userId when a consultant edits their own profile
+    @Transactional
+    public ConsultantDto updateByUserId(UUID userId, UpdateConsultantDto consultantDto) {
+        Consultant consultant = consultantRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", userId));
+        return applyUpdate(consultant, consultantDto);
     }
 
     @Transactional
     public ConsultantDto update(UUID id, UpdateConsultantDto consultantDto) {
         Consultant consultant = findById(id);
+        return applyUpdate(consultant, consultantDto);
+    }
 
+    private ConsultantDto applyUpdate(Consultant consultant, UpdateConsultantDto consultantDto) {
         if (consultantDto.getSpecialization() != null) {
             consultant.setSpecialization(consultantDto.getSpecialization());
         }
         if (consultantDto.getExperience() != null) {
             consultant.setExperience(consultantDto.getExperience());
         }
-
-        Consultant updatedConsultant = consultantRepository.save(consultant);
-        return consultantMapper.toDto(updatedConsultant);
+        return consultantMapper.toDto(consultantRepository.save(consultant));
     }
 
     @Transactional
     public void delete(UUID id) {
         Consultant consultant = findById(id);
+        User user = consultant.getUser();
         consultantRepository.delete(consultant);
+        if (UserRole.CONSULTANT.equals(user.getRole())) {
+            user.setRole(UserRole.CLIENT);
+            userRepository.save(user);
+        }
     }
 
     private Consultant findById(UUID id) {

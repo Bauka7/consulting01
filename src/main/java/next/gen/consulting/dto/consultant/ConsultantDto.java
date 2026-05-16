@@ -15,6 +15,7 @@ import java.util.UUID;
 public class ConsultantDto {
     private UUID id;
     private UUID userId;
+    private String fullName;
     private String specialization;
     private String experience;
     private LocalDateTime createdAt;

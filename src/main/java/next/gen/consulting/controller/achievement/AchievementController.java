@@ -74,6 +74,6 @@ public class AchievementController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteAchievement(@PathVariable UUID id) {
         achievementService.delete(id);
-        return ResponseEntity.ok("Достижение удалено");
+        return ResponseEntity.ok("Achievement deleted");
     }
 }

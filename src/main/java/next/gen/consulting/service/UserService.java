@@ -7,9 +7,12 @@ import next.gen.consulting.dto.user.UserUpdateRequest;
 import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.user.UserMapper;
+import next.gen.consulting.model.Consultant;
 import next.gen.consulting.model.User;
 import next.gen.consulting.model.UserRole;
+import next.gen.consulting.repository.ConsultantRepository;
 import next.gen.consulting.repository.UserRepository;
+import next.gen.consulting.util.PhoneNormalizer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ConsultantRepository consultantRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
@@ -39,8 +43,10 @@ public class UserService {
     }
 
     public UserDto getByPhone(String phone) {
-        User user = userRepository.findByPhone(phone)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "phone", phone));
+        String normalized = PhoneNormalizer.normalizeForStorage(phone);
+        var candidates = PhoneNormalizer.buildLookupCandidates(phone);
+        User user = userRepository.findFirstByPhoneIn(candidates)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "phone", normalized));
         return userMapper.toDto(user);
     }
 
@@ -51,16 +57,31 @@ public class UserService {
 
     @Transactional
     public UserDto create(RegisterRequest registerRequest) {
-        validateUniquePhone(registerRequest.getPhone());
+        String phone = PhoneNormalizer.normalizeForStorage(registerRequest.getPhone());
+        validateUniquePhone(phone);
+
+        UserRole role = (registerRequest.getRole() == UserRole.CLIENT || registerRequest.getRole() == UserRole.CONSULTANT)
+                ? registerRequest.getRole()
+                : UserRole.CLIENT;
 
         User user = User.builder()
                 .passwordHash(passwordEncoder.encode(registerRequest.getPassword()))
                 .fullName(registerRequest.getFullName())
-                .phone(registerRequest.getPhone())
-                .role(UserRole.CLIENT)
+                .phone(phone)
+                .role(role)
                 .build();
 
         User savedUser = userRepository.save(user);
+
+        if (UserRole.CONSULTANT.equals(role)) {
+            consultantRepository.findByUserId(savedUser.getId()).ifPresentOrElse(
+                    c -> {},
+                    () -> consultantRepository.save(
+                            Consultant.builder().user(savedUser).specialization("").experience("").build()
+                    )
+            );
+        }
+
         return userMapper.toDto(savedUser);
     }
 
@@ -68,14 +89,17 @@ public class UserService {
     public UserDto update(UUID id, UserUpdateRequest updateRequest) {
         User user = findById(id);
 
-        if (updateRequest.getEmail() != null && !user.getEmail().equals(updateRequest.getEmail())) {
+        if (updateRequest.getEmail() != null && !updateRequest.getEmail().equals(user.getEmail())) {
             validateUniqueEmail(updateRequest.getEmail());
             user.setEmail(updateRequest.getEmail());
         }
 
-        if (updateRequest.getPhone() != null && !user.getPhone().equals(updateRequest.getPhone())) {
-            validateUniquePhone(updateRequest.getPhone());
-            user.setPhone(updateRequest.getPhone());
+        if (updateRequest.getPhone() != null) {
+            String normalizedPhone = PhoneNormalizer.normalizeForStorage(updateRequest.getPhone());
+            if (!normalizedPhone.equals(user.getPhone())) {
+                validateUniquePhone(normalizedPhone);
+                user.setPhone(normalizedPhone);
+            }
         }
 
         if (updateRequest.getFullName() != null) {
@@ -93,15 +117,29 @@ public class UserService {
     @Transactional
     public UserDto updateRole(UUID id, UserRole role) {
         User user = findById(id);
+        UserRole previousRole = user.getRole();
         user.setRole(role);
         User updatedUser = userRepository.save(user);
+
+        if (UserRole.CONSULTANT.equals(role)) {
+            consultantRepository.findByUserId(updatedUser.getId()).ifPresentOrElse(
+                    c -> {},
+                    () -> consultantRepository.save(
+                            Consultant.builder().user(updatedUser).specialization("").experience("").build()
+                    )
+            );
+        } else if (UserRole.CONSULTANT.equals(previousRole)) {
+            consultantRepository.findByUserId(updatedUser.getId())
+                    .ifPresent(consultantRepository::delete);
+        }
+
         return userMapper.toDto(updatedUser);
     }
 
     @Transactional
     public void delete(UUID id) {
-        User user = findById(id);
-        userRepository.delete(user);
+        findById(id);
+        userRepository.deleteByIdNative(id);
     }
 
     public User findEntityById(UUID id) {
@@ -124,13 +162,14 @@ public class UserService {
 
     private void validateUniqueEmail(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new BadRequestException("Email уже используется");
+            throw new BadRequestException("Email is already in use");
         }
     }
 
     private void validateUniquePhone(String phone) {
-        if (userRepository.existsByPhone(phone)) {
-            throw new BadRequestException("Телефон уже используется");
+        var candidates = PhoneNormalizer.buildLookupCandidates(phone);
+        if (!candidates.isEmpty() && userRepository.existsByPhoneIn(candidates)) {
+            throw new BadRequestException("Phone number is already in use");
         }
     }
 }

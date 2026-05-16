@@ -13,6 +13,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
+
 @Component
 @RequiredArgsConstructor
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
@@ -30,17 +32,38 @@ public class RequestNotificationHandler extends AbstractRequestActionHandler {
         }
 
         switch (context.getActionType()) {
-            case CREATED -> notify("Создана новая заявка \"" + request.getDescription().substring(0,15) + ".");
+            case CREATED -> notifyAdminsAndConsultants("A new request was created: \"" + request.getProduct() + "\".");
+            case CONSULTANT_ASSIGNED -> {
+                UUID consultantUserId = context.getActorId();
+                if (consultantUserId != null) {
+                    try {
+                        notificationService.createNotification(
+                                consultantUserId,
+                                "You have been assigned to request \"" + request.getProduct() + "\".",
+                                request.getId()
+                        );
+                    } catch (Exception ex) {
+                        log.error("Failed to notify consultant {}: {}", consultantUserId, ex.getMessage(), ex);
+                    }
+                }
+                notifyAdmins("Consultant assigned to request \"" + request.getProduct() + "\".");
+            }
             case STATUS_CHANGED -> {
                 RequestStatus newStatus = request.getStatus();
-                notifyAdmins("Заявка \"" + request.getDescription().substring(0,15) + "...\"  изменила статус на " + newStatus + ".");
+                String statusLabel = switch (newStatus) {
+                    case PROGRESS -> "In Progress";
+                    case COMPLETED -> "Completed";
+                    case REJECTED -> "Rejected";
+                    default -> newStatus.name();
+                };
+                notifyAdmins("Request \"" + request.getProduct() + "\" status changed to: " + statusLabel + ".");
             }
             default -> {
             }
         }
     }
 
-    private void notify(String message) {
+    private void notifyAdminsAndConsultants(String message) {
         List<User> users = userRepository.findAllByRole_AdminOrConsultant();
         if (users.isEmpty()) {
             log.debug("No users found for notification message: {}", message);
@@ -75,5 +98,5 @@ public class RequestNotificationHandler extends AbstractRequestActionHandler {
                     }
                 });
     }
-}
 
+}

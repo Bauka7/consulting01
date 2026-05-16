@@ -59,6 +59,6 @@ public class ContactLinkController {
     @PreAuthorize("hasAnyRole('CONSULTANT', 'ADMIN')")
     public ResponseEntity<String> deleteContactLink(@PathVariable UUID id) {
         contactLinkService.delete(id);
-        return ResponseEntity.ok("Контактная ссылка удалена");
+        return ResponseEntity.ok("Contact link deleted");
     }
 }
