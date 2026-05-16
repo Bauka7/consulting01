@@ -36,7 +36,7 @@ export default function AdminConsultants() {
       setDeleteId(null)
       toast.success('Consultant deleted')
     },
-    onError: () => toast.error('Failed to delete consultant'),
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Failed to delete consultant'),
   })
 
   const consultants = data?.content ?? []
