@@ -56,12 +56,18 @@ export default function ConsultantProfile() {
       userApi.updateProfile({ fullName: data.fullName, phone: data.phone, email: data.email || undefined }),
     onSuccess: (updated) => {
       setUser(updated)
-      toast.success('Personal info updated')
     },
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message ?? 'Failed to update personal info'),
   })
 
   async function onSubmit(data: Form) {
-    await Promise.all([updateConsultant.mutateAsync(data), updateUser.mutateAsync(data)])
+    try {
+      await Promise.all([updateConsultant.mutateAsync(data), updateUser.mutateAsync(data)])
+      toast.success('Profile saved')
+    } catch {
+      // individual mutations show their own errors
+    }
   }
 
   const initials = user?.fullName

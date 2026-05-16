@@ -50,8 +50,9 @@ export default function ConsultantLinks() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contact-links'] })
       setDeleteId(null)
-      toast.success('Deleted')
+      toast.success('Link deleted')
     },
+    onError: () => toast.error('Failed to delete link'),
   })
 
   function startEdit(id: string, sn: string, l: string) {

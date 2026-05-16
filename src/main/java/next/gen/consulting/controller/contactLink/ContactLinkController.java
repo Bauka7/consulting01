@@ -51,14 +51,21 @@ public class ContactLinkController {
     @PreAuthorize("hasAnyRole('CONSULTANT', 'ADMIN')")
     public ResponseEntity<ContactLinkDto> updateContactLink(
             @PathVariable UUID id,
-            @RequestBody UpdateContactLinkDto updateRequest) {
-        return ResponseEntity.ok(contactLinkService.update(id, updateRequest));
+            @RequestBody UpdateContactLinkDto updateRequest,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        return ResponseEntity.ok(contactLinkService.update(id, updateRequest, principal.getId(), isAdmin));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CONSULTANT', 'ADMIN')")
-    public ResponseEntity<String> deleteContactLink(@PathVariable UUID id) {
-        contactLinkService.delete(id);
+    public ResponseEntity<String> deleteContactLink(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        contactLinkService.delete(id, principal.getId(), isAdmin);
         return ResponseEntity.ok("Contact link deleted");
     }
 }

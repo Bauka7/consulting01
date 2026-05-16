@@ -37,7 +37,8 @@ export default function AdminAchievements() {
       setCreateData({ userId: '', description: '' })
       toast.success('Achievement created')
     },
-    onError: () => toast.error('Failed'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message ?? 'Failed to create achievement'),
   })
 
   const deleteMutation = useMutation({
@@ -45,8 +46,9 @@ export default function AdminAchievements() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-achievements'] })
       setDeleteId(null)
-      toast.success('Deleted')
+      toast.success('Achievement deleted')
     },
+    onError: () => toast.error('Failed to delete achievement'),
   })
 
   const achievements = data?.content ?? []

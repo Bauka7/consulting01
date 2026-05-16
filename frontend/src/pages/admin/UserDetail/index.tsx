@@ -38,7 +38,8 @@ export default function AdminUserDetail() {
       qc.invalidateQueries({ queryKey: ['consultants-all'] })
       toast.success('Role updated')
     },
-    onError: () => toast.error('Failed to update role'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message ?? 'Failed to update role'),
   })
 
   const deleteMutation = useMutation({
@@ -51,7 +52,8 @@ export default function AdminUserDetail() {
       toast.success('User deleted')
       navigate('/admin/users')
     },
-    onError: () => toast.error('Failed to delete user'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message ?? 'Failed to delete user'),
   })
 
   if (isLoading) {

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import next.gen.consulting.dto.contactLink.ContactLinkDto;
 import next.gen.consulting.dto.contactLink.CreateContactLinkDto;
 import next.gen.consulting.dto.contactLink.UpdateContactLinkDto;
+import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.contactLink.ContactLinkMapper;
 import next.gen.consulting.model.Consultant;
@@ -59,8 +60,11 @@ public class ContactLinkService {
     }
 
     @Transactional
-    public ContactLinkDto update(UUID id, UpdateContactLinkDto contactLinkDto) {
+    public ContactLinkDto update(UUID id, UpdateContactLinkDto contactLinkDto, UUID actorId, boolean isAdmin) {
         ContactLink contactLink = findById(id);
+        if (!isAdmin && !contactLink.getConsultant().getUser().getId().equals(actorId)) {
+            throw new BadRequestException("You can only update your own contact links");
+        }
 
         if (contactLinkDto.getServiceName() != null) {
             contactLink.setServiceName(contactLinkDto.getServiceName());
@@ -74,8 +78,11 @@ public class ContactLinkService {
     }
 
     @Transactional
-    public void delete(UUID id) {
+    public void delete(UUID id, UUID actorId, boolean isAdmin) {
         ContactLink contactLink = findById(id);
+        if (!isAdmin && !contactLink.getConsultant().getUser().getId().equals(actorId)) {
+            throw new BadRequestException("You can only delete your own contact links");
+        }
         contactLinkRepository.delete(contactLink);
     }
 

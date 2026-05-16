@@ -2,7 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { requestApi } from '@/entities/request/api'
 import { consultantApi } from '@/entities/consultant/api'
-import { userApi } from '@/entities/user/api'
 import { Layout } from '@/widgets/Layout'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -58,12 +57,6 @@ export default function ClientRequestDetail() {
     enabled: !!request?.consultantId,
   })
 
-  const { data: consultantUser } = useQuery({
-    queryKey: ['user', consultant?.userId],
-    queryFn: () => userApi.getById(consultant!.userId),
-    enabled: !!consultant?.userId,
-  })
-
   const updateMutation = useMutation({
     mutationFn: () => requestApi.update(id!, {
       product: editProduct.trim() || undefined,
@@ -117,7 +110,7 @@ export default function ClientRequestDetail() {
   const canEdit = request.status === 'PENDING'
   const stepIdx = isRejected ? -1 : STEPS.findIndex((s) => s.status === request.status)
 
-  const consultantInitials = consultantUser?.fullName
+  const consultantInitials = consultant?.fullName
     ?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'
   const colorIdx = consultant ? consultant.id.charCodeAt(0) % AVATAR_COLORS.length : 0
 
@@ -330,7 +323,7 @@ export default function ClientRequestDetail() {
             </div>
           </div>
 
-          {consultantUser ? (
+          {consultant ? (
             <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
               <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-4">Assigned consultant</p>
               <div className="flex items-center gap-3 mb-3">
@@ -338,8 +331,8 @@ export default function ClientRequestDetail() {
                   {consultantInitials}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-text-main">{consultantUser.fullName}</p>
-                  <p className="text-xs text-muted mt-0.5">{consultant?.specialization}</p>
+                  <p className="text-sm font-bold text-text-main">{consultant.fullName}</p>
+                  <p className="text-xs text-muted mt-0.5">{consultant.specialization}</p>
                 </div>
               </div>
               {consultant?.experience && (

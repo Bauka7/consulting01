@@ -110,8 +110,8 @@ function CreateUserModal({
             >
               <option value="CLIENT">Client</option>
               <option value="CONSULTANT">Consultant</option>
-              <option value="ADMIN">Admin</option>
             </select>
+            <p className="text-xs text-muted mt-1">To create an Admin, create as Client then promote via User Detail.</p>
           </div>
         </div>
 
@@ -173,7 +173,8 @@ export default function AdminUsers() {
       setShowCreate(false)
       setForm({ fullName: '', phone: '', password: '', role: 'CLIENT' })
     },
-    onError: () => toast.error('Failed to create user'),
+    onError: (err: any) =>
+      toast.error(err?.response?.data?.message ?? 'Failed to create user'),
   })
 
   const { data, isLoading } = useQuery({
