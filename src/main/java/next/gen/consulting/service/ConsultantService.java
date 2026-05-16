@@ -10,7 +10,9 @@ import next.gen.consulting.mapper.consultant.ConsultantMapper;
 import next.gen.consulting.model.Consultant;
 import next.gen.consulting.model.User;
 import next.gen.consulting.model.UserRole;
+import next.gen.consulting.model.RequestStatus;
 import next.gen.consulting.repository.ConsultantRepository;
+import next.gen.consulting.repository.RequestRepository;
 import next.gen.consulting.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,7 @@ public class ConsultantService {
 
     private final ConsultantRepository consultantRepository;
     private final UserRepository userRepository;
+    private final RequestRepository requestRepository;
     private final ConsultantMapper consultantMapper;
 
     public ConsultantDto getById(UUID id) {
@@ -122,6 +125,17 @@ public class ConsultantService {
     @Transactional
     public void delete(UUID id) {
         Consultant consultant = findById(id);
+        List<RequestStatus> activeStatuses = List.of(RequestStatus.PENDING, RequestStatus.PROGRESS);
+
+        if (requestRepository.existsByConsultantIdAndStatusIn(consultant.getId(), activeStatuses)) {
+            throw new BadRequestException(
+                "Cannot delete consultant with active requests. Reassign or close them first.");
+        }
+
+        // Unassign from terminal requests to avoid FK violation
+        requestRepository.findByConsultantId(consultant.getId())
+                .forEach(r -> r.setConsultant(null));
+
         User user = consultant.getUser();
         consultantRepository.delete(consultant);
         if (UserRole.CONSULTANT.equals(user.getRole())) {

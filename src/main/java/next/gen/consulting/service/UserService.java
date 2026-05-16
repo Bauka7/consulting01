@@ -8,9 +8,11 @@ import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.user.UserMapper;
 import next.gen.consulting.model.Consultant;
+import next.gen.consulting.model.RequestStatus;
 import next.gen.consulting.model.User;
 import next.gen.consulting.model.UserRole;
 import next.gen.consulting.repository.ConsultantRepository;
+import next.gen.consulting.repository.RequestRepository;
 import next.gen.consulting.repository.UserRepository;
 import next.gen.consulting.util.PhoneNormalizer;
 import org.springframework.data.domain.Page;
@@ -19,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -28,6 +31,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final ConsultantRepository consultantRepository;
+    private final RequestRepository requestRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
 
@@ -118,6 +122,16 @@ public class UserService {
     public UserDto updateRole(UUID id, UserRole role) {
         User user = findById(id);
         UserRole previousRole = user.getRole();
+
+        List<RequestStatus> activeStatuses = List.of(RequestStatus.PENDING, RequestStatus.PROGRESS);
+
+        if (UserRole.CONSULTANT.equals(role) && !UserRole.CONSULTANT.equals(previousRole)) {
+            if (requestRepository.existsByClientIdAndStatusIn(id, activeStatuses)) {
+                throw new BadRequestException(
+                    "Cannot assign Consultant role: user has active requests as a client. Close or complete them first.");
+            }
+        }
+
         user.setRole(role);
         User updatedUser = userRepository.save(user);
 
@@ -129,8 +143,12 @@ public class UserService {
                     )
             );
         } else if (UserRole.CONSULTANT.equals(previousRole)) {
-            consultantRepository.findByUserId(updatedUser.getId())
-                    .ifPresent(consultantRepository::delete);
+            consultantRepository.findByUserId(updatedUser.getId()).ifPresent(consultant -> {
+                // Unassign from active requests before removing profile
+                requestRepository.findByConsultantIdAndStatusIn(consultant.getId(), activeStatuses)
+                        .forEach(r -> r.setConsultant(null));
+                consultantRepository.delete(consultant);
+            });
         }
 
         return userMapper.toDto(updatedUser);

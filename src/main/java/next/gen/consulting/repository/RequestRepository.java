@@ -16,6 +16,9 @@ import java.util.UUID;
 public interface RequestRepository extends JpaRepository<Request, UUID> {
     List<Request> findByClientId(UUID clientId);
     List<Request> findByConsultantId(UUID consultantId);
+    List<Request> findByConsultantIdAndStatusIn(UUID consultantId, List<RequestStatus> statuses);
+    boolean existsByClientIdAndStatusIn(UUID clientId, List<RequestStatus> statuses);
+    boolean existsByConsultantIdAndStatusIn(UUID consultantId, List<RequestStatus> statuses);
     List<Request> findByStatus(RequestStatus status);
     Page<Request> findByClientId(UUID clientId, Pageable pageable);
     Page<Request> findByStatus(RequestStatus status, Pageable pageable);

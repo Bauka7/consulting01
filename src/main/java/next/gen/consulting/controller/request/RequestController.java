@@ -72,11 +72,14 @@ public class RequestController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CLIENT', 'CONSULTANT', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
     public ResponseEntity<RequestDto> updateRequest(
             @PathVariable UUID id,
-            @Valid @RequestBody UpdateRequestDto updateRequest) {
-        RequestDto updatedRequest = requestService.update(id, updateRequest);
+            @Valid @RequestBody UpdateRequestDto updateRequest,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        RequestDto updatedRequest = requestService.update(id, updateRequest, principal.getId(), isAdmin);
         return ResponseEntity.ok(updatedRequest);
     }
 
@@ -95,8 +98,12 @@ public class RequestController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CLIENT', 'ADMIN')")
-    public ResponseEntity<String> deleteRequest(@PathVariable UUID id) {
-        requestService.delete(id);
+    public ResponseEntity<String> deleteRequest(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        boolean isAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        requestService.delete(id, principal.getId(), isAdmin);
         return ResponseEntity.ok("Request deleted");
     }
 

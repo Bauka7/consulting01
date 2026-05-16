@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { consultantApi } from '@/entities/consultant/api'
 import { ArrowRight, ChevronRight } from 'lucide-react'
 import type { ConsultantDto } from '@/entities/consultant/types'
-import type { UserDto } from '@/entities/user/types'
 import { useAuth } from '@/shared/hooks/useAuth'
 
 function ConsultantCard({ consultant }: { consultant: ConsultantDto }) {
@@ -15,7 +14,7 @@ function ConsultantCard({ consultant }: { consultant: ConsultantDto }) {
   const colorIndex = consultant.id.charCodeAt(0) % colors.length
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer">
+    <Link to={`/consultants/${consultant.id}`} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow block">
       <div className={`w-10 h-10 rounded-full ${colors[colorIndex]} flex items-center justify-center text-white text-sm font-bold mb-3`}>
         {initials}
       </div>
@@ -28,7 +27,7 @@ function ConsultantCard({ consultant }: { consultant: ConsultantDto }) {
         </div>
         <ChevronRight size={16} className="text-gray-400" />
       </div>
-    </div>
+    </Link>
   )
 }
 

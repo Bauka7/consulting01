@@ -221,7 +221,7 @@ export default function AdminRequests() {
                   className="input-field"
                 >
                   <option value="">— Unassigned —</option>
-                  {consultantsPage?.content.map((c) => (
+                  {consultantsPage?.content.filter((c) => c.userId !== selected.clientId).map((c) => (
                     <option key={c.id} value={c.id}>{c.fullName}{c.specialization ? ` · ${c.specialization}` : ''}</option>
                   ))}
                 </select>

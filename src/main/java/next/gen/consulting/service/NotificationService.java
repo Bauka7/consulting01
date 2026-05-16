@@ -2,6 +2,7 @@ package next.gen.consulting.service;
 
 import lombok.RequiredArgsConstructor;
 import next.gen.consulting.dto.notification.NotificationDto;
+import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.notification.NotificationMapper;
 import next.gen.consulting.model.Notification;
@@ -72,8 +73,11 @@ public class NotificationService {
     }
 
     @Transactional
-    public NotificationDto markAsRead(UUID id) {
+    public NotificationDto markAsRead(UUID id, UUID actorId) {
         Notification notification = findById(id);
+        if (!notification.getUser().getId().equals(actorId)) {
+            throw new BadRequestException("You can only mark your own notifications as read");
+        }
         notification.setIsRead(true);
         Notification updatedNotification = notificationRepository.save(notification);
         return notificationMapper.toDto(updatedNotification);
@@ -95,8 +99,11 @@ public class NotificationService {
     }
 
     @Transactional
-    public void delete(UUID id) {
+    public void delete(UUID id, UUID actorId) {
         Notification notification = findById(id);
+        if (!notification.getUser().getId().equals(actorId)) {
+            throw new BadRequestException("You can only delete your own notifications");
+        }
         notificationRepository.delete(notification);
     }
 

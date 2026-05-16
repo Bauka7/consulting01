@@ -206,7 +206,7 @@ export default function Register() {
                             value={field.value ?? ''}
                             onBlur={field.onBlur}
                             onChange={(event) => field.onChange(sanitizePhoneInput(event.target.value))}
-                            placeholder="+70009876543"
+                            placeholder="+77009876543"
                             className="flex-1 py-3 text-sm outline-none bg-transparent placeholder-gray-400"
                             autoComplete="tel-national"
                             inputMode="tel"

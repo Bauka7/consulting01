@@ -95,8 +95,11 @@ public class RequestService {
     }
 
     @Transactional
-    public RequestDto update(UUID id, UpdateRequestDto requestDto) {
+    public RequestDto update(UUID id, UpdateRequestDto requestDto, UUID actorId, boolean isAdmin) {
         Request request = findById(id);
+        if (!isAdmin && !request.getClient().getId().equals(actorId)) {
+            throw new BadRequestException("You can only modify your own requests");
+        }
         if (request.getStatus() == RequestStatus.COMPLETED || request.getStatus() == RequestStatus.REJECTED) {
             throw new BadRequestException("Cannot modify a " + request.getStatus().name().toLowerCase() + " request");
         }
@@ -122,6 +125,9 @@ public class RequestService {
         } else if (requestDto.getConsultantId() != null) {
             Consultant consultant = consultantRepository.findById(requestDto.getConsultantId())
                     .orElseThrow(() -> new ResourceNotFoundException("Consultant", "id", requestDto.getConsultantId()));
+            if (consultant.getUser().getId().equals(request.getClient().getId())) {
+                throw new BadRequestException("A consultant cannot be assigned to their own request");
+            }
             boolean alreadyAssigned = request.getConsultant() != null
                     && request.getConsultant().getId().equals(consultant.getId());
             if (!alreadyAssigned) {
@@ -195,8 +201,11 @@ public class RequestService {
     }
 
     @Transactional
-    public void delete(UUID id) {
+    public void delete(UUID id, UUID actorId, boolean isAdmin) {
         Request request = findById(id);
+        if (!isAdmin && !request.getClient().getId().equals(actorId)) {
+            throw new BadRequestException("You can only delete your own requests");
+        }
         RequestDto dto = requestMapper.toDto(request);
         requestRepository.delete(request);
 

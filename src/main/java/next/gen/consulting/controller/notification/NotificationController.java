@@ -46,15 +46,19 @@ public class NotificationController {
 
     @PutMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('CLIENT', 'CONSULTANT', 'ADMIN')")
-    public ResponseEntity<NotificationDto> markAsRead(@PathVariable UUID id) {
-        NotificationDto updatedNotification = notificationService.markAsRead(id);
+    public ResponseEntity<NotificationDto> markAsRead(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        NotificationDto updatedNotification = notificationService.markAsRead(id, principal.getId());
         return ResponseEntity.ok(updatedNotification);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CLIENT', 'CONSULTANT', 'ADMIN')")
-    public ResponseEntity<String> deleteNotification(@PathVariable UUID id) {
-        notificationService.delete(id);
+    public ResponseEntity<String> deleteNotification(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        notificationService.delete(id, principal.getId());
         return ResponseEntity.ok("Notification deleted");
     }
 

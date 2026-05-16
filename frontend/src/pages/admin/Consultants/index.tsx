@@ -32,9 +32,11 @@ export default function AdminConsultants() {
     mutationFn: (id: string) => consultantApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-consultants'] })
+      qc.invalidateQueries({ queryKey: ['consultants-all'] })
       setDeleteId(null)
-      toast.success('Deleted')
+      toast.success('Consultant deleted')
     },
+    onError: () => toast.error('Failed to delete consultant'),
   })
 
   const consultants = data?.content ?? []
