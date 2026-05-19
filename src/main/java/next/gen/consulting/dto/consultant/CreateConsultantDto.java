@@ -8,6 +8,7 @@ import java.util.UUID;
 
 @Data
 public class CreateConsultantDto {
+
     @NotNull(message = "User ID is required")
     private UUID userId;
 
@@ -15,4 +16,6 @@ public class CreateConsultantDto {
     private String specialization;
 
     private String experience;
+
+    private UUID factoryId;
 }

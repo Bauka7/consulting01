@@ -1,4 +1,4 @@
-package next.gen.consulting.dto.consultant;
+package next.gen.consulting.dto.category;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,13 +12,10 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConsultantDto {
+public class ProductCategoryDto {
     private UUID id;
-    private UUID userId;
-    private String fullName;
-    private String specialization;
-    private String experience;
-    private UUID factoryId;
-    private String factoryName;
+    private String name;
+    private String description;
+    private String iconUrl;
     private LocalDateTime createdAt;
 }

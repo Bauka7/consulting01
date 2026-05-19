@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Data
 public class CreateRequestDto {
+
     @NotBlank(message = "Full name is required")
     private String fullName;
 
@@ -20,4 +21,6 @@ public class CreateRequestDto {
     private String description;
 
     private UUID consultantId;
+
+    private UUID factoryId;
 }

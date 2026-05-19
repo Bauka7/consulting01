@@ -8,10 +8,12 @@ import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.request.RequestMapper;
 import next.gen.consulting.model.Consultant;
+import next.gen.consulting.model.Factory;
 import next.gen.consulting.model.Request;
 import next.gen.consulting.model.RequestStatus;
 import next.gen.consulting.model.User;
 import next.gen.consulting.repository.ConsultantRepository;
+import next.gen.consulting.repository.FactoryRepository;
 import next.gen.consulting.repository.RequestRepository;
 import next.gen.consulting.repository.UserRepository;
 import next.gen.consulting.service.request.RequestActionChain;
@@ -23,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,17 +34,16 @@ public class RequestService {
     private final RequestRepository requestRepository;
     private final UserRepository userRepository;
     private final ConsultantRepository consultantRepository;
+    private final FactoryRepository factoryRepository;
     private final RequestMapper requestMapper;
     private final RequestActionChain requestActionChain;
 
     public RequestDto getById(UUID id) {
-        Request request = findById(id);
-        return requestMapper.toDto(request);
+        return requestMapper.toDto(findById(id));
     }
 
     public Page<RequestDto> getAll(Pageable pageable, RequestStatus status) {
-        return requestRepository.findByStatusNull(status, pageable)
-                .map(requestMapper::toDto);
+        return requestRepository.findByStatusNull(status, pageable).map(requestMapper::toDto);
     }
 
     public Page<RequestDto> getByClientId(UUID clientId, Pageable pageable, RequestStatus status) {
@@ -52,51 +52,56 @@ public class RequestService {
     }
 
     public Page<RequestDto> getConsultantRequests(UUID userId, Pageable pageable) {
-        return requestRepository.findByConsultantUserId(userId, pageable)
-                .map(requestMapper::toDto);
+        return requestRepository.findByConsultantUserId(userId, pageable).map(requestMapper::toDto);
     }
 
     public Page<RequestDto> getByStatus(RequestStatus status, Pageable pageable) {
-        return requestRepository.findByStatus(status, pageable)
-                .map(requestMapper::toDto);
+        return requestRepository.findByStatus(status, pageable).map(requestMapper::toDto);
     }
 
     @Transactional
-    public RequestDto create(CreateRequestDto requestDto, UUID id) {
-        User client = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+    public RequestDto create(CreateRequestDto dto, UUID clientId) {
+        User client = userRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", clientId));
 
         Consultant consultant = null;
-        if (requestDto.getConsultantId() != null) {
-            consultant = consultantRepository.findById(requestDto.getConsultantId())
-                    .orElse(null);
+        if (dto.getConsultantId() != null) {
+            consultant = consultantRepository.findById(dto.getConsultantId()).orElse(null);
+        }
+
+        Factory factory = null;
+        if (dto.getFactoryId() != null) {
+            factory = factoryRepository.findById(dto.getFactoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", dto.getFactoryId()));
         }
 
         Request request = Request.builder()
-                .fullName(requestDto.getFullName())
-                .phone(requestDto.getPhone())
-                .product(requestDto.getProduct())
-                .description(requestDto.getDescription())
+                .fullName(dto.getFullName())
+                .phone(dto.getPhone())
+                .product(dto.getProduct())
+                .description(dto.getDescription())
                 .client(client)
                 .consultant(consultant)
+                .factory(factory)
                 .status(RequestStatus.PENDING)
                 .build();
 
-        Request savedRequest = requestRepository.save(request);
-        RequestDto dto = requestMapper.toDto(savedRequest);
+        Request saved = requestRepository.save(request);
+        RequestDto result = requestMapper.toDto(saved);
 
         requestActionChain.process(RequestActionContext.builder()
                 .actionType(RequestActionType.CREATED)
-                .request(dto)
-                .actorId(id)
+                .request(result)
+                .actorId(clientId)
                 .build());
 
-        return dto;
+        return result;
     }
 
     @Transactional
-    public RequestDto update(UUID id, UpdateRequestDto requestDto, UUID actorId, boolean isAdmin) {
+    public RequestDto update(UUID id, UpdateRequestDto dto, UUID actorId, boolean isAdmin) {
         Request request = findById(id);
+
         if (!isAdmin && !request.getClient().getId().equals(actorId)) {
             throw new BadRequestException("You can only modify your own requests");
         }
@@ -104,27 +109,20 @@ public class RequestService {
             throw new BadRequestException("Cannot modify a " + request.getStatus().name().toLowerCase() + " request");
         }
 
-        if (requestDto.getFullName() != null) {
-            request.setFullName(requestDto.getFullName());
-        }
-        if (requestDto.getPhone() != null) {
-            request.setPhone(requestDto.getPhone());
-        }
-        if (requestDto.getDescription() != null) {
-            request.setDescription(requestDto.getDescription());
-        }
-        if (requestDto.getProduct() != null) {
-            request.setProduct(requestDto.getProduct());
-        }
+        if (dto.getFullName() != null)    request.setFullName(dto.getFullName());
+        if (dto.getPhone() != null)        request.setPhone(dto.getPhone());
+        if (dto.getDescription() != null) request.setDescription(dto.getDescription());
+        if (dto.getProduct() != null)      request.setProduct(dto.getProduct());
+
         boolean consultantChanged = false;
         UUID assignedConsultantUserId = null;
 
-        if (Boolean.TRUE.equals(requestDto.getRemoveConsultant())) {
+        if (Boolean.TRUE.equals(dto.getRemoveConsultant())) {
             request.setConsultant(null);
             consultantChanged = true;
-        } else if (requestDto.getConsultantId() != null) {
-            Consultant consultant = consultantRepository.findById(requestDto.getConsultantId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Consultant", "id", requestDto.getConsultantId()));
+        } else if (dto.getConsultantId() != null) {
+            Consultant consultant = consultantRepository.findById(dto.getConsultantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Consultant", "id", dto.getConsultantId()));
             if (consultant.getUser().getId().equals(request.getClient().getId())) {
                 throw new BadRequestException("A consultant cannot be assigned to their own request");
             }
@@ -137,23 +135,30 @@ public class RequestService {
             }
         }
 
-        Request updatedRequest = requestRepository.save(request);
-        RequestDto dto = requestMapper.toDto(updatedRequest);
+        if (Boolean.TRUE.equals(dto.getRemoveFactory())) {
+            request.setFactory(null);
+        } else if (dto.getFactoryId() != null) {
+            Factory factory = factoryRepository.findById(dto.getFactoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", dto.getFactoryId()));
+            request.setFactory(factory);
+        }
+
+        RequestDto result = requestMapper.toDto(requestRepository.save(request));
 
         if (consultantChanged && assignedConsultantUserId != null) {
             requestActionChain.process(RequestActionContext.builder()
                     .actionType(RequestActionType.CONSULTANT_ASSIGNED)
-                    .request(dto)
+                    .request(result)
                     .actorId(assignedConsultantUserId)
                     .build());
         } else {
             requestActionChain.process(RequestActionContext.builder()
                     .actionType(RequestActionType.UPDATED)
-                    .request(dto)
+                    .request(result)
                     .build());
         }
 
-        return dto;
+        return result;
     }
 
     public Page<RequestDto> getMyRequests(UUID id, Pageable pageable, RequestStatus status) {
@@ -182,22 +187,20 @@ public class RequestService {
         }
 
         request.setStatus(status);
-
         if (comment != null) {
             request.setComment(comment);
         }
 
-        Request updatedRequest = requestRepository.save(request);
-        RequestDto dto = requestMapper.toDto(updatedRequest);
+        RequestDto result = requestMapper.toDto(requestRepository.save(request));
 
         requestActionChain.process(RequestActionContext.builder()
                 .actionType(RequestActionType.STATUS_CHANGED)
-                .request(dto)
+                .request(result)
                 .previousStatus(previousStatus)
                 .actorId(actorId)
                 .build());
 
-        return dto;
+        return result;
     }
 
     @Transactional

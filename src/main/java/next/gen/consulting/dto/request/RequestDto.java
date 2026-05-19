@@ -17,6 +17,8 @@ public class RequestDto {
     private UUID id;
     private UUID clientId;
     private UUID consultantId;
+    private UUID factoryId;
+    private String factoryName;
     private String fullName;
     private String phone;
     private String product;

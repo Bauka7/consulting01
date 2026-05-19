@@ -14,15 +14,28 @@ import java.util.UUID;
 
 @Repository
 public interface RequestRepository extends JpaRepository<Request, UUID> {
+
     List<Request> findByClientId(UUID clientId);
+
     List<Request> findByConsultantId(UUID consultantId);
+
     List<Request> findByConsultantIdAndStatusIn(UUID consultantId, List<RequestStatus> statuses);
+
     boolean existsByClientIdAndStatusIn(UUID clientId, List<RequestStatus> statuses);
+
     boolean existsByConsultantIdAndStatusIn(UUID consultantId, List<RequestStatus> statuses);
+
+    boolean existsByFactoryIdAndStatusIn(UUID factoryId, List<RequestStatus> statuses);
+
     List<Request> findByStatus(RequestStatus status);
+
     Page<Request> findByClientId(UUID clientId, Pageable pageable);
+
     Page<Request> findByStatus(RequestStatus status, Pageable pageable);
+
     Page<Request> findByConsultantUserId(UUID userId, Pageable pageable);
+
+    Page<Request> findByFactoryId(UUID factoryId, Pageable pageable);
 
     @Query("""
             SELECT r FROM Request r

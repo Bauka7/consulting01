@@ -50,6 +50,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                     "/api/consultants",
                     "/api/consultants/**",
+                    "/api/factories",
+                    "/api/factories/**",
+                    "/api/categories",
+                    "/api/categories/**",
                     "/api/contact-links/user/**",
                     "/api/achievements/user/**"
                 ).permitAll()

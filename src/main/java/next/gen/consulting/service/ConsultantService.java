@@ -8,10 +8,12 @@ import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.consultant.ConsultantMapper;
 import next.gen.consulting.model.Consultant;
+import next.gen.consulting.model.Factory;
+import next.gen.consulting.model.RequestStatus;
 import next.gen.consulting.model.User;
 import next.gen.consulting.model.UserRole;
-import next.gen.consulting.model.RequestStatus;
 import next.gen.consulting.repository.ConsultantRepository;
+import next.gen.consulting.repository.FactoryRepository;
 import next.gen.consulting.repository.RequestRepository;
 import next.gen.consulting.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -30,31 +32,28 @@ public class ConsultantService {
     private final ConsultantRepository consultantRepository;
     private final UserRepository userRepository;
     private final RequestRepository requestRepository;
+    private final FactoryRepository factoryRepository;
     private final ConsultantMapper consultantMapper;
 
     public ConsultantDto getById(UUID id) {
-        Consultant consultant = findById(id);
-        return consultantMapper.toDto(consultant);
+        return consultantMapper.toDto(findById(id));
     }
 
     public ConsultantDto getByUserId(UUID userId) {
-        Consultant consultant = consultantRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", userId));
-        return consultantMapper.toDto(consultant);
+        return consultantMapper.toDto(
+                consultantRepository.findByUserId(userId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", userId))
+        );
     }
 
     public List<ConsultantDto> search(String userName) {
         String query = userName == null ? "" : userName.trim();
-
         List<Consultant> consultants = query.isEmpty()
                 ? consultantRepository.findByUserRole(UserRole.CONSULTANT)
                 : consultantRepository.findByUserFullNameContainingIgnoreCase(query).stream()
                         .filter(c -> UserRole.CONSULTANT.equals(c.getUser().getRole()))
                         .toList();
-
-        return consultants.stream()
-                .map(consultantMapper::toDto)
-                .toList();
+        return consultants.stream().map(consultantMapper::toDto).toList();
     }
 
     public Page<ConsultantDto> getAll(Pageable pageable) {
@@ -63,9 +62,9 @@ public class ConsultantService {
     }
 
     @Transactional
-    public ConsultantDto create(CreateConsultantDto consultantDto) {
-        User user = userRepository.findById(consultantDto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", consultantDto.getUserId()));
+    public ConsultantDto create(CreateConsultantDto dto) {
+        User user = userRepository.findById(dto.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", dto.getUserId()));
 
         if (consultantRepository.findByUserId(user.getId()).isPresent()) {
             throw new BadRequestException("Consultant profile already exists for this user");
@@ -76,10 +75,17 @@ public class ConsultantService {
             userRepository.save(user);
         }
 
+        Factory factory = null;
+        if (dto.getFactoryId() != null) {
+            factory = factoryRepository.findById(dto.getFactoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", dto.getFactoryId()));
+        }
+
         Consultant consultant = Consultant.builder()
                 .user(user)
-                .specialization(consultantDto.getSpecialization())
-                .experience(consultantDto.getExperience())
+                .factory(factory)
+                .specialization(dto.getSpecialization())
+                .experience(dto.getExperience())
                 .build();
 
         return consultantMapper.toDto(consultantRepository.save(consultant));
@@ -87,37 +93,43 @@ public class ConsultantService {
 
     @Transactional
     public ConsultantDto createEmpty(User user) {
-        if (consultantRepository.findByUserId(user.getId()).isPresent()) {
-            return consultantMapper.toDto(consultantRepository.findByUserId(user.getId()).get());
-        }
-        Consultant consultant = Consultant.builder()
-                .user(user)
-                .specialization("")
-                .experience("")
-                .build();
-        return consultantMapper.toDto(consultantRepository.save(consultant));
+        return consultantRepository.findByUserId(user.getId())
+                .map(consultantMapper::toDto)
+                .orElseGet(() -> {
+                    Consultant consultant = Consultant.builder()
+                            .user(user)
+                            .specialization("")
+                            .experience("")
+                            .build();
+                    return consultantMapper.toDto(consultantRepository.save(consultant));
+                });
     }
 
-    // Update by userId when a consultant edits their own profile
     @Transactional
-    public ConsultantDto updateByUserId(UUID userId, UpdateConsultantDto consultantDto) {
+    public ConsultantDto updateByUserId(UUID userId, UpdateConsultantDto dto) {
         Consultant consultant = consultantRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", userId));
-        return applyUpdate(consultant, consultantDto);
+        return applyUpdate(consultant, dto);
     }
 
     @Transactional
-    public ConsultantDto update(UUID id, UpdateConsultantDto consultantDto) {
-        Consultant consultant = findById(id);
-        return applyUpdate(consultant, consultantDto);
+    public ConsultantDto update(UUID id, UpdateConsultantDto dto) {
+        return applyUpdate(findById(id), dto);
     }
 
-    private ConsultantDto applyUpdate(Consultant consultant, UpdateConsultantDto consultantDto) {
-        if (consultantDto.getSpecialization() != null) {
-            consultant.setSpecialization(consultantDto.getSpecialization());
+    private ConsultantDto applyUpdate(Consultant consultant, UpdateConsultantDto dto) {
+        if (dto.getSpecialization() != null) {
+            consultant.setSpecialization(dto.getSpecialization());
         }
-        if (consultantDto.getExperience() != null) {
-            consultant.setExperience(consultantDto.getExperience());
+        if (dto.getExperience() != null) {
+            consultant.setExperience(dto.getExperience());
+        }
+        if (Boolean.TRUE.equals(dto.getRemoveFactory())) {
+            consultant.setFactory(null);
+        } else if (dto.getFactoryId() != null) {
+            Factory factory = factoryRepository.findById(dto.getFactoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", dto.getFactoryId()));
+            consultant.setFactory(factory);
         }
         return consultantMapper.toDto(consultantRepository.save(consultant));
     }
@@ -129,10 +141,9 @@ public class ConsultantService {
 
         if (requestRepository.existsByConsultantIdAndStatusIn(consultant.getId(), activeStatuses)) {
             throw new BadRequestException(
-                "Cannot delete consultant with active requests. Reassign or close them first.");
+                    "Cannot delete consultant with active requests. Reassign or close them first.");
         }
 
-        // Unassign from terminal requests to avoid FK violation
         requestRepository.findByConsultantId(consultant.getId())
                 .forEach(r -> r.setConsultant(null));
 

@@ -7,6 +7,7 @@ import next.gen.consulting.dto.consultant.CreateConsultantDto;
 import next.gen.consulting.dto.consultant.UpdateConsultantDto;
 import next.gen.consulting.service.ConsultantService;
 import next.gen.consulting.service.CustomUserPrincipal;
+import next.gen.consulting.service.FactoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -23,26 +24,24 @@ import java.util.UUID;
 public class ConsultantController {
 
     private final ConsultantService consultantService;
+    private final FactoryService factoryService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ConsultantDto> createConsultant(@Valid @RequestBody CreateConsultantDto createRequest) {
-        ConsultantDto savedConsultant = consultantService.create(createRequest);
-        return ResponseEntity.ok(savedConsultant);
+        return ResponseEntity.ok(consultantService.create(createRequest));
     }
 
     @GetMapping
     public ResponseEntity<Page<ConsultantDto>> getAllConsultants(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
-    ) {
-        Page<ConsultantDto> consultants = consultantService.getAll(PageRequest.of(page, size));
-        return ResponseEntity.ok(consultants);
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(consultantService.getAll(PageRequest.of(page, size)));
     }
 
-    // Search by name through a query parameter to avoid conflicting with /{id}
     @GetMapping("/search")
-    public ResponseEntity<List<ConsultantDto>> searchConsultants(@RequestParam(required = false) String name) {
+    public ResponseEntity<List<ConsultantDto>> searchConsultants(
+            @RequestParam(required = false) String name) {
         return ResponseEntity.ok(consultantService.search(name));
     }
 
@@ -56,7 +55,16 @@ public class ConsultantController {
         return ResponseEntity.ok(consultantService.getByUserId(userId));
     }
 
-    // A consultant edits their own profile: resolve consultantId via userId from the token
+    @GetMapping("/by-factory/{factoryId}")
+    public ResponseEntity<Page<ConsultantDto>> getConsultantsByFactory(
+            @PathVariable UUID factoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(
+                factoryService.getConsultantsByFactory(factoryId, PageRequest.of(page, size))
+        );
+    }
+
     @PutMapping("/my")
     @PreAuthorize("hasAnyRole('CONSULTANT')")
     public ResponseEntity<ConsultantDto> updateMyConsultant(

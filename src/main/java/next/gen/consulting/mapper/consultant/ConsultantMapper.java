@@ -8,8 +8,10 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface ConsultantMapper {
-    
-    @Mapping(target = "userId", source = "user.id")
-    @Mapping(target = "fullName", source = "user.fullName")
+
+    @Mapping(target = "userId",      source = "user.id")
+    @Mapping(target = "fullName",    source = "user.fullName")
+    @Mapping(target = "factoryId",   source = "factory.id")
+    @Mapping(target = "factoryName", source = "factory.name")
     ConsultantDto toDto(Consultant consultant);
 }

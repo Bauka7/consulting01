@@ -18,29 +18,32 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Consultant {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "factory_id")
+    private Factory factory;
+
     @Column(name = "specialization", nullable = false)
     private String specialization;
-    
+
     @Column(name = "experience", columnDefinition = "TEXT")
     private String experience;
-    
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
-    // Relationships
+
     @OneToMany(mappedBy = "consultant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ContactLink> contactLinks;
-    
+
     @OneToMany(mappedBy = "consultant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Request> consultantRequests;
 }

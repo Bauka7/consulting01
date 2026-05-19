@@ -18,4 +18,6 @@ public class UpdateRequestDto {
     private String description;
     private UUID consultantId;
     private Boolean removeConsultant;
+    private UUID factoryId;
+    private Boolean removeFactory;
 }

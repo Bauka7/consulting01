@@ -13,6 +13,7 @@ import java.util.UUID;
 
 @Repository
 public interface ConsultantRepository extends JpaRepository<Consultant, UUID> {
+
     Optional<Consultant> findByUserId(UUID userId);
 
     List<Consultant> findByUserFullNameContainingIgnoreCase(String fullName);
@@ -20,4 +21,8 @@ public interface ConsultantRepository extends JpaRepository<Consultant, UUID> {
     Page<Consultant> findByUserRole(UserRole role, Pageable pageable);
 
     List<Consultant> findByUserRole(UserRole role);
+
+    Page<Consultant> findByFactoryId(UUID factoryId, Pageable pageable);
+
+    List<Consultant> findByFactoryId(UUID factoryId);
 }
