@@ -27,6 +27,19 @@ public class RequestAuditHandler extends AbstractRequestActionHandler {
                 action = "REQUEST_CREATED";
                 description = "Request \"" + request.getProduct() + "\" created by " + request.getFullName();
             }
+            case UPDATED -> {
+                action = "REQUEST_UPDATED";
+                description = "Request \"" + request.getProduct() + "\" was updated";
+            }
+            case CONSULTANT_ASSIGNED -> {
+                action = "CONSULTANT_ASSIGNED";
+                description = "Consultant assigned to request \"" + request.getProduct() + "\"";
+            }
+            case FACTORY_ASSIGNED -> {
+                action = "FACTORY_ASSIGNED";
+                String factory = context.getActorName() != null ? context.getActorName() : "unknown";
+                description = "Factory \"" + factory + "\" assigned to request \"" + request.getProduct() + "\"";
+            }
             case STATUS_CHANGED -> {
                 String statusLabel = switch (request.getStatus()) {
                     case PROGRESS -> "In Progress";
@@ -37,13 +50,14 @@ public class RequestAuditHandler extends AbstractRequestActionHandler {
                 action = "REQUEST_STATUS_CHANGED";
                 description = "Request \"" + request.getProduct() + "\" → " + statusLabel;
             }
-            case CONSULTANT_ASSIGNED -> {
-                action = "CONSULTANT_ASSIGNED";
-                description = "Consultant assigned to request \"" + request.getProduct() + "\"";
+            case TRACKING_UPDATED -> {
+                action = "TRACKING_UPDATED";
+                description = "Tracking updated for request \"" + request.getProduct() + "\""
+                        + (request.getTrackingNumber() != null ? ": " + request.getTrackingNumber() : "");
             }
-            case UPDATED -> {
-                action = "REQUEST_UPDATED";
-                description = "Request \"" + request.getProduct() + "\" was updated";
+            case FACTORY_COMMENT_ADDED -> {
+                action = "FACTORY_COMMENT_ADDED";
+                description = "Factory comment added to request \"" + request.getProduct() + "\"";
             }
             default -> { return; }
         }

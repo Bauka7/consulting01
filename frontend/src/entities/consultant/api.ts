@@ -15,6 +15,9 @@ export const consultantApi = {
   getByUserId: (userId: string) =>
     api.get<ConsultantDto>(`/consultants/by-user/${userId}`).then((r) => r.data),
 
+  getByFactory: (factoryId: string, params?: { page?: number; size?: number }) =>
+    api.get<Page<ConsultantDto>>(`/consultants/by-factory/${factoryId}`, { params }).then((r) => r.data),
+
   create: (data: CreateConsultantDto) =>
     api.post<ConsultantDto>('/consultants', data).then((r) => r.data),
 

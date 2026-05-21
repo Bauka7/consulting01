@@ -1,39 +1,37 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { requestApi } from '@/entities/request/api'
 import { consultantApi } from '@/entities/consultant/api'
-import { Layout } from '@/widgets/Layout'
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog'
 import { format, formatDistanceToNow } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import { parseDate } from '@/shared/lib/date'
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import {
-  ArrowLeft, Trash2, Clock, User, Phone,
+  ArrowLeft, Trash2, Clock, User, Phone, Building2,
   CalendarDays, RefreshCw, MessageSquare,
   CheckCircle2, Circle, Loader2, Pencil, X, Check,
 } from 'lucide-react'
-import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import type { RequestStatus } from '@/entities/request/types'
 
-const STEPS: { status: RequestStatus; label: string; sub: string }[] = [
-  { status: 'PENDING',   label: 'Submitted',  sub: 'Request received' },
-  { status: 'PROGRESS',  label: 'In Progress', sub: 'Consultant working' },
-  { status: 'COMPLETED', label: 'Completed',   sub: 'Issue resolved' },
+const STEPS: { status: RequestStatus; label: string }[] = [
+  { status: 'PENDING', label: 'Отправлена' },
+  { status: 'PROGRESS', label: 'В работе' },
+  { status: 'COMPLETED', label: 'Завершена' },
 ]
 
-const STATUS_CONFIG: Record<RequestStatus, { dot: string; text: string; badge: string; bar: string }> = {
-  PENDING:   { dot: 'bg-amber-400',   text: 'text-amber-700',   badge: 'bg-amber-50 text-amber-700 border-amber-200',      bar: 'bg-amber-400' },
-  PROGRESS:  { dot: 'bg-blue-500',    text: 'text-blue-700',    badge: 'bg-blue-50 text-blue-700 border-blue-200',         bar: 'bg-blue-500' },
-  COMPLETED: { dot: 'bg-emerald-500', text: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',bar: 'bg-emerald-500' },
-  REJECTED:  { dot: 'bg-gray-400',    text: 'text-gray-600',    badge: 'bg-gray-100 text-gray-600 border-gray-200',        bar: 'bg-gray-400' },
+const STATUS_CONFIG: Record<RequestStatus, { badge: string; bar: string; dot: string }> = {
+  PENDING:   { badge: 'badge-pending',  bar: 'bg-amber-400', dot: 'bg-amber-400' },
+  PROGRESS:  { badge: 'badge-progress', bar: 'bg-blue-500',  dot: 'bg-blue-500' },
+  COMPLETED: { badge: 'badge-done',     bar: 'bg-teal-500',  dot: 'bg-teal-500' },
+  REJECTED:  { badge: 'badge-rejected', bar: 'bg-gray-300',  dot: 'bg-gray-400' },
 }
 
 const STATUS_LABEL: Record<RequestStatus, string> = {
-  PENDING: 'Pending', PROGRESS: 'In Progress', COMPLETED: 'Completed', REJECTED: 'Rejected',
+  PENDING: 'Ожидает', PROGRESS: 'В работе', COMPLETED: 'Завершена', REJECTED: 'Отклонена',
 }
-
-const AVATAR_COLORS = ['bg-blue-500', 'bg-violet-500', 'bg-teal-500', 'bg-rose-500', 'bg-amber-500', 'bg-green-600']
 
 export default function ClientRequestDetail() {
   const { id } = useParams<{ id: string }>()
@@ -41,8 +39,8 @@ export default function ClientRequestDetail() {
   const qc = useQueryClient()
 
   const [showDelete, setShowDelete] = useState(false)
-  const [editing, setEditing]       = useState(false)
-  const [editProduct, setEditProduct]         = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editProduct, setEditProduct] = useState('')
   const [editDescription, setEditDescription] = useState('')
 
   const { data: request, isLoading } = useQuery({
@@ -64,42 +62,35 @@ export default function ClientRequestDetail() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['request', id] })
-      qc.invalidateQueries({ queryKey: ['my-requests-all'] })
-      toast.success('Request updated')
+      toast.success('Заявка обновлена')
       setEditing(false)
     },
-    onError: () => toast.error('Failed to update'),
+    onError: () => toast.error('Ошибка обновления'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => requestApi.delete(id!),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['my-requests-all'] })
-      toast.success('Request deleted')
+      qc.invalidateQueries({ queryKey: ['my-requests'] })
+      toast.success('Заявка удалена')
       navigate('/requests')
     },
-    onError: () => toast.error('Failed to delete'),
+    onError: () => toast.error('Ошибка удаления'),
   })
 
   function startEdit() {
     if (!request) return
     setEditProduct(request.product)
-    setEditDescription(request.description)
+    setEditDescription(request.description ?? '')
     setEditing(true)
-  }
-
-  function cancelEdit() {
-    setEditing(false)
   }
 
   if (isLoading) {
     return (
-      <Layout title="Request Detail" breadcrumb="MY REQUESTS / DETAIL">
-        <div className="max-w-5xl animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded-lg w-72" />
-          <div className="h-64 bg-gray-100 rounded-2xl" />
-        </div>
-      </Layout>
+      <div className="max-w-5xl mx-auto px-4 py-8 animate-pulse space-y-4">
+        <div className="h-8 bg-[#E8ECF0] rounded-lg w-48" />
+        <div className="h-64 bg-[#E8ECF0] rounded-2xl" />
+      </div>
     )
   }
 
@@ -110,245 +101,215 @@ export default function ClientRequestDetail() {
   const canEdit = request.status === 'PENDING'
   const stepIdx = isRejected ? -1 : STEPS.findIndex((s) => s.status === request.status)
 
-  const consultantInitials = consultant?.fullName
-    ?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() ?? '?'
-  const colorIdx = consultant ? consultant.id.charCodeAt(0) % AVATAR_COLORS.length : 0
-
   return (
-    <Layout title="Request Detail" breadcrumb="MY REQUESTS / DETAIL">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.2 } }}
+      className="max-w-5xl mx-auto px-4 py-8"
+    >
       <button
         onClick={() => navigate('/requests')}
-        className="flex items-center gap-1.5 text-sm text-muted hover:text-text-main transition-colors mb-6"
+        className="flex items-center gap-1.5 text-sm text-[#718096] hover:text-[#0C1426] transition-colors mb-6"
       >
-        <ArrowLeft size={15} /> Back to requests
+        <ArrowLeft className="w-4 h-4" />
+        Мои заявки
       </button>
 
-      <div className="max-w-5xl grid grid-cols-5 gap-6 items-start">
-
-        {/* ── Left main ── */}
-        <div className="col-span-3 space-y-5">
-          <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-            <div className={clsx('h-1.5 w-full', cfg.bar)} />
-
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+        {/* Left */}
+        <div className="lg:col-span-3 space-y-5">
+          <div className="card overflow-hidden">
+            <div className={`h-1.5 w-full ${cfg.bar}`} />
             <div className="p-6">
-              {/* Header */}
               <div className="flex items-start justify-between gap-4 mb-5">
                 <div className="flex-1 min-w-0">
                   {editing ? (
                     <input
                       value={editProduct}
                       onChange={(e) => setEditProduct(e.target.value)}
-                      className="w-full text-xl font-bold text-text-main bg-gray-50 border border-accent/50 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-accent/20"
-                      placeholder="Topic / Product"
+                      className="input-field text-lg font-bold"
                     />
                   ) : (
-                    <h1 className="text-xl font-bold text-text-main leading-snug">{request.product}</h1>
+                    <h1 className="text-xl font-bold text-[#0C1426] leading-snug">{request.product}</h1>
                   )}
-                  <p className="text-xs text-muted font-mono mt-1 tracking-wider">
-                    #{request.id.slice(0, 8).toUpperCase()}
-                  </p>
+                  <p className="text-xs text-[#718096] font-mono mt-1">#{request.id.slice(0, 8).toUpperCase()}</p>
                 </div>
-
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {canEdit && !editing && (
                     <button
                       onClick={startEdit}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted border border-border px-3 py-1.5 rounded-lg hover:border-accent hover:text-accent transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-medium text-[#718096] border border-[#E8ECF0] px-3 py-1.5 rounded-lg hover:border-[#E63946] hover:text-[#E63946] transition-colors"
                     >
-                      <Pencil size={12} /> Edit
+                      <Pencil className="w-3 h-3" /> Изменить
                     </button>
                   )}
                   {editing && (
                     <button
-                      onClick={cancelEdit}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted border border-border px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={() => setEditing(false)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-[#718096] border border-[#E8ECF0] px-3 py-1.5 rounded-lg hover:bg-[#F5F7FA] transition-colors"
                     >
-                      <X size={12} /> Cancel
+                      <X className="w-3 h-3" /> Отмена
                     </button>
                   )}
-                  <span className={clsx('inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border', cfg.badge)}>
-                    <span className={clsx('w-1.5 h-1.5 rounded-full', cfg.dot)} />
+                  <span className={`${cfg.badge} px-3 py-1.5 rounded-full border font-semibold text-xs flex items-center gap-1.5`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
                     {STATUS_LABEL[request.status]}
                   </span>
                 </div>
               </div>
 
-              {/* Progress stepper */}
+              {/* Stepper */}
               {!isRejected && (
-                <div className="mb-6">
-                  <div className="flex items-center">
-                    {STEPS.map((step, i) => {
-                      const done = i < stepIdx
-                      const active = i === stepIdx
-                      return (
-                        <div key={step.status} className="flex items-center flex-1 last:flex-none">
-                          <div className="flex flex-col items-center gap-1.5">
-                            <div className={clsx(
-                              'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300',
-                              done   ? 'bg-accent text-white shadow-sm'
-                              : active ? 'bg-accent text-white shadow-md ring-4 ring-accent/20'
-                              : 'bg-gray-100 text-muted',
-                            )}>
-                              {done   ? <CheckCircle2 size={16} />
-                              : active ? <Loader2 size={14} className="animate-spin" />
-                              : <Circle size={14} />}
-                            </div>
-                            <div className="text-center">
-                              <p className={clsx('text-xs font-semibold', active || done ? 'text-accent' : 'text-muted')}>
-                                {step.label}
-                              </p>
-                              <p className="text-[10px] text-muted hidden sm:block">{step.sub}</p>
-                            </div>
+                <div className="mb-6 flex items-center">
+                  {STEPS.map((step, i) => {
+                    const done = i < stepIdx
+                    const active = i === stepIdx
+                    return (
+                      <div key={step.status} className="flex items-center flex-1 last:flex-none">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            done ? 'bg-[#E63946] text-white'
+                            : active ? 'bg-[#E63946] text-white ring-4 ring-[#E63946]/20'
+                            : 'bg-[#F5F7FA] text-[#718096]'
+                          }`}>
+                            {done ? <CheckCircle2 className="w-4 h-4" />
+                            : active ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Circle className="w-3.5 h-3.5" />}
                           </div>
-                          {i < STEPS.length - 1 && (
-                            <div className={clsx(
-                              'flex-1 h-0.5 mx-2 mb-5 rounded-full transition-all duration-500',
-                              i < stepIdx ? 'bg-accent' : 'bg-gray-200',
-                            )} />
-                          )}
+                          <p className={`text-xs font-semibold ${active || done ? 'text-[#E63946]' : 'text-[#718096]'}`}>
+                            {step.label}
+                          </p>
                         </div>
-                      )
-                    })}
-                  </div>
+                        {i < STEPS.length - 1 && (
+                          <div className={`flex-1 h-0.5 mx-2 mb-5 rounded-full transition-all ${i < stepIdx ? 'bg-[#E63946]' : 'bg-[#E8ECF0]'}`} />
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
 
               {isRejected && (
-                <div className="mb-6 flex items-center gap-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                  <span>✕</span> This request was declined by the consultant.
+                <div className="mb-5 flex items-center gap-2 text-sm text-[#718096] bg-[#F5F7FA] border border-[#E8ECF0] rounded-xl px-4 py-3">
+                  <X className="w-4 h-4" /> Заявка была отклонена консультантом
                 </div>
               )}
 
               {/* Description */}
               <div>
-                <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-2">Description</p>
+                <p className="text-xs font-bold text-[#718096] uppercase tracking-widest mb-2">Описание</p>
                 {editing ? (
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={5}
-                    className="w-full text-sm text-gray-700 bg-gray-50 border border-accent/50 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-accent/20 resize-none leading-relaxed"
-                    placeholder="Describe your request in detail..."
+                    className="input-field resize-none"
                   />
                 ) : (
-                  <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-xl px-4 py-3.5 border border-gray-100">
-                    {request.description}
+                  <p className="text-sm text-[#4A5568] leading-relaxed bg-[#F5F7FA] rounded-xl px-4 py-3.5 border border-[#E8ECF0]">
+                    {request.description || '—'}
                   </p>
                 )}
               </div>
 
-              {/* Save button */}
               {editing && (
-                <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-border">
-                  <button onClick={cancelEdit} className="btn-ghost text-sm px-4 py-2">
-                    Cancel
-                  </button>
+                <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-[#E8ECF0]">
+                  <button onClick={() => setEditing(false)} className="btn-ghost">Отмена</button>
                   <button
                     onClick={() => updateMutation.mutate()}
-                    disabled={updateMutation.isPending || !editProduct.trim() || !editDescription.trim()}
-                    className="btn-primary text-sm px-5 py-2 flex items-center gap-2 disabled:opacity-50"
+                    disabled={updateMutation.isPending}
+                    className="btn-primary flex items-center gap-2"
                   >
-                    {updateMutation.isPending
-                      ? <><Loader2 size={13} className="animate-spin" /> Saving…</>
-                      : <><Check size={13} /> Save changes</>
-                    }
+                    {updateMutation.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Сохранение…</> : <><Check className="w-4 h-4" /> Сохранить</>}
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Consultant feedback */}
+          {/* Comment */}
           {request.comment && (
-            <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
+            <div className="card p-5 border-[#E63946]/20">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <MessageSquare size={14} className="text-accent" />
+                <div className="w-7 h-7 rounded-lg bg-[#FEE2E2] flex items-center justify-center">
+                  <MessageSquare className="w-3.5 h-3.5 text-[#E63946]" />
                 </div>
-                <p className="text-sm font-semibold text-text-main">Consultant feedback</p>
+                <p className="text-sm font-semibold text-[#0C1426]">Комментарий консультанта</p>
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed bg-blue-50 rounded-xl px-4 py-3.5 border border-blue-100">
+              <p className="text-sm text-[#4A5568] leading-relaxed bg-[#FEE2E2]/30 rounded-xl px-4 py-3.5 border border-[#E63946]/20">
                 {request.comment}
               </p>
             </div>
           )}
 
-          {/* Delete */}
-          {request.status === 'PENDING' && !editing && (
+          {canEdit && !editing && (
             <div className="flex justify-end">
               <button
                 onClick={() => setShowDelete(true)}
-                className="flex items-center gap-1.5 text-sm text-danger/70 hover:text-danger transition-colors py-1"
+                className="flex items-center gap-1.5 text-sm text-[#E63946]/70 hover:text-[#E63946] transition-colors"
               >
-                <Trash2 size={14} /> Delete request
+                <Trash2 className="w-4 h-4" /> Удалить заявку
               </button>
             </div>
           )}
         </div>
 
-        {/* ── Right sidebar ── */}
-        <div className="col-span-2 space-y-4 sticky top-20">
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
-            <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-4">Details</p>
+        {/* Right sidebar */}
+        <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-6">
+          <div className="card p-5">
+            <p className="text-xs font-bold text-[#718096] uppercase tracking-widest mb-4">Детали заявки</p>
             <div className="space-y-3.5">
-
               {[
-                { icon: <User size={13} />,         label: 'Client',       value: request.fullName },
-                { icon: <Phone size={13} />,        label: 'Phone',        value: <span className="font-mono">{request.phone}</span> },
-                { icon: <Clock size={13} />,        label: 'Status',       value: (
-                  <span className={clsx('inline-flex items-center gap-1.5 text-xs font-semibold', cfg.text)}>
-                    <span className={clsx('w-1.5 h-1.5 rounded-full', cfg.dot)} />
-                    {STATUS_LABEL[request.status]}
-                  </span>
-                )},
-                { icon: <CalendarDays size={13} />, label: 'Created',      value: (
-                  <span>{format(parseDate(request.createdAt), 'MMM d, yyyy')}<span className="text-muted ml-1 font-normal">{format(parseDate(request.createdAt), 'HH:mm')}</span></span>
-                )},
-                { icon: <RefreshCw size={13} />,    label: 'Last updated', value: formatDistanceToNow(parseDate(request.updatedAt), { addSuffix: true }) },
+                { icon: User, label: 'Клиент', value: request.fullName },
+                { icon: Phone, label: 'Телефон', value: <span className="font-mono">{request.phone}</span> },
+                { icon: Clock, label: 'Статус', value: <span className={`${cfg.badge} px-2 py-0.5 rounded-full text-xs font-semibold`}>{STATUS_LABEL[request.status]}</span> },
+                { icon: CalendarDays, label: 'Создана', value: format(parseDate(request.createdAt), 'dd MMM yyyy', { locale: ru }) },
+                { icon: RefreshCw, label: 'Обновлена', value: formatDistanceToNow(parseDate(request.updatedAt), { locale: ru, addSuffix: true }) },
+                ...(request.factoryName ? [{ icon: Building2, label: 'Завод', value: (
+                  <Link to={`/factories/${request.factoryId}`} className="text-[#E63946] hover:underline">
+                    {request.factoryName}
+                  </Link>
+                )}] : []),
               ].map((row, i, arr) => (
                 <div key={row.label}>
                   <div className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-muted">
-                      {row.icon}
+                    <div className="w-7 h-7 rounded-lg bg-[#F5F7FA] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <row.icon className="w-3.5 h-3.5 text-[#718096]" />
                     </div>
                     <div>
-                      <p className="text-[10px] text-muted uppercase tracking-wide font-semibold">{row.label}</p>
-                      <div className="text-sm font-medium text-text-main mt-0.5">{row.value}</div>
+                      <p className="text-[10px] text-[#718096] uppercase tracking-wide font-semibold">{row.label}</p>
+                      <div className="text-sm font-medium text-[#0C1426] mt-0.5">{row.value}</div>
                     </div>
                   </div>
-                  {i < arr.length - 1 && <div className="h-px bg-gray-100 mt-3.5 ml-10" />}
+                  {i < arr.length - 1 && <div className="h-px bg-[#E8ECF0] mt-3.5 ml-10" />}
                 </div>
               ))}
-
             </div>
           </div>
 
           {consultant ? (
-            <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
-              <p className="text-[11px] font-bold text-muted uppercase tracking-widest mb-4">Assigned consultant</p>
+            <div className="card p-5">
+              <p className="text-xs font-bold text-[#718096] uppercase tracking-widest mb-4">Консультант</p>
               <div className="flex items-center gap-3 mb-3">
-                <div className={clsx('w-11 h-11 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-sm', AVATAR_COLORS[colorIdx])}>
-                  {consultantInitials}
+                <div className="w-11 h-11 rounded-xl bg-[#0C1426] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  {consultant.fullName.split(' ').map((w) => w[0]).join('').slice(0, 2)}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-text-main">{consultant.fullName}</p>
-                  <p className="text-xs text-muted mt-0.5">{consultant.specialization}</p>
+                  <p className="text-sm font-bold text-[#0C1426]">{consultant.fullName}</p>
+                  <p className="text-xs text-[#718096] mt-0.5">{consultant.specialization}</p>
+                  {consultant.factoryName && (
+                    <p className="text-xs text-[#E63946] mt-0.5">{consultant.factoryName}</p>
+                  )}
                 </div>
               </div>
-              {consultant?.experience && (
-                <div className="bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-100 mt-3">
-                  <p className="text-[10px] text-muted uppercase tracking-wide font-semibold mb-0.5">Experience</p>
-                  <p className="text-xs text-text-main">{consultant.experience}</p>
-                </div>
-              )}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-5 text-center">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <User size={18} className="text-gray-400" />
+            <div className="card p-5 border-dashed text-center">
+              <div className="w-10 h-10 rounded-full bg-[#F5F7FA] flex items-center justify-center mx-auto mb-3">
+                <User className="w-5 h-5 text-[#CBD5E0]" />
               </div>
-              <p className="text-sm font-semibold text-text-main">No consultant yet</p>
-              <p className="text-xs text-muted mt-1 leading-relaxed">We'll assign the best match shortly</p>
+              <p className="text-sm font-semibold text-[#0C1426]">Консультант не назначен</p>
+              <p className="text-xs text-[#718096] mt-1">Назначим подходящего специалиста</p>
             </div>
           )}
         </div>
@@ -356,12 +317,12 @@ export default function ClientRequestDetail() {
 
       <ConfirmDialog
         open={showDelete}
-        title="Delete this request?"
-        description="This action is permanent and cannot be undone."
+        title="Удалить заявку?"
+        description="Это действие необратимо."
         onConfirm={() => deleteMutation.mutate()}
         onCancel={() => setShowDelete(false)}
         loading={deleteMutation.isPending}
       />
-    </Layout>
+    </motion.div>
   )
 }

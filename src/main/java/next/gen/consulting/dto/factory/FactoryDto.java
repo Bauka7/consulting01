@@ -22,4 +22,10 @@ public class FactoryDto {
     private String imageUrl;
     private List<ProductCategoryDto> categories;
     private LocalDateTime createdAt;
+
+    // Factory user account (populated for ADMIN view)
+    private UUID userId;
+    private String userPhone;
+    private String userFullName;
+    private boolean hasUserAccount;
 }

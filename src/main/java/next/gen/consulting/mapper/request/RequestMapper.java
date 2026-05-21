@@ -9,9 +9,10 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface RequestMapper {
 
-    @Mapping(target = "clientId",     source = "client.id")
-    @Mapping(target = "consultantId", source = "consultant.id")
-    @Mapping(target = "factoryId",    source = "factory.id")
-    @Mapping(target = "factoryName",  source = "factory.name")
+    @Mapping(target = "clientId",       source = "client.id")
+    @Mapping(target = "consultantId",   source = "consultant.id")
+    @Mapping(target = "consultantName", source = "consultant.user.fullName")
+    @Mapping(target = "factoryId",      source = "factory.id")
+    @Mapping(target = "factoryName",    source = "factory.name")
     RequestDto toDto(Request request);
 }

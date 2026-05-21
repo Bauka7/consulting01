@@ -9,6 +9,7 @@ export function useAuth() {
     isClient: user?.role === 'CLIENT',
     isConsultant: user?.role === 'CONSULTANT',
     isAdmin: user?.role === 'ADMIN',
+    isFactory: user?.role === 'FACTORY',
     logout,
   }
 }

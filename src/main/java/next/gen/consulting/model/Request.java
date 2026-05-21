@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -54,6 +55,30 @@ public class Request {
 
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
+
+    // ── Order detail fields (set by client at creation) ──────────────────
+    @Column(name = "quantity")
+    private Integer quantity;
+
+    @Column(name = "unit", length = 20)
+    private String unit;
+
+    @Column(name = "deadline")
+    private LocalDate deadline;
+
+    // ── Shipment tracking (set by consultant or factory) ─────────────────
+    @Column(name = "tracking_number", length = 100)
+    private String trackingNumber;
+
+    @Column(name = "tracking_url", columnDefinition = "TEXT")
+    private String trackingUrl;
+
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt;
+
+    // ── Factory response to consultant ───────────────────────────────────
+    @Column(name = "factory_comment", columnDefinition = "TEXT")
+    private String factoryComment;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

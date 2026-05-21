@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios'
-import type { RequestDto, CreateRequestDto, UpdateRequestDto, RequestStatus } from './types'
+import type { RequestDto, CreateRequestDto, UpdateRequestDto, UpdateTrackingDto, RequestStatus } from './types'
 import type { Page } from '@/entities/user/types'
 
 export const requestApi = {
@@ -25,6 +25,12 @@ export const requestApi = {
     api
       .put<RequestDto>(`/requests/${id}/status`, null, { params: { status, comment } })
       .then((r) => r.data),
+
+  assignFactory: (id: string, factoryId: string) =>
+    api.patch<RequestDto>(`/requests/${id}/assign-factory`, null, { params: { factoryId } }).then((r) => r.data),
+
+  updateTracking: (id: string, data: UpdateTrackingDto) =>
+    api.patch<RequestDto>(`/requests/${id}/tracking`, data).then((r) => r.data),
 
   delete: (id: string) => api.delete(`/requests/${id}`).then((r) => r.data),
 }

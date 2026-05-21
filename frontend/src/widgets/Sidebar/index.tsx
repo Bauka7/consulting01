@@ -1,77 +1,56 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { clsx } from 'clsx'
 import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Bell,
-  User,
-  Link2,
-  Trophy,
-  ClipboardList,
-  ShieldCheck,
-  LogOut,
+  LayoutDashboard, FileText, Users, Bell, User,
+  Link2, Trophy, ClipboardList, ShieldCheck, LogOut,
+  Building2, Tag, MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '@/shared/hooks/useAuth'
+import { LogoFull } from '@/shared/ui/Logo'
 import toast from 'react-hot-toast'
 
 interface NavItem {
   label: string
   path: string
   icon: React.ReactNode
+  badge?: number
 }
 
 const clientNav: NavItem[] = [
-  { label: 'Overview', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
-  { label: 'My Requests', path: '/requests', icon: <FileText size={18} /> },
-  { label: 'Consultants', path: '/consultants', icon: <Users size={18} /> },
-  { label: 'Notifications', path: '/notifications', icon: <Bell size={18} /> },
-  { label: 'Profile', path: '/profile', icon: <User size={18} /> },
+  { label: 'Обзор', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Заводы', path: '/factories', icon: <Building2 size={18} /> },
+  { label: 'Мои заявки', path: '/requests', icon: <FileText size={18} /> },
+  { label: 'Сообщения', path: '/messages', icon: <MessageSquare size={18} />, badge: 2 },
+  { label: 'Уведомления', path: '/notifications', icon: <Bell size={18} /> },
+  { label: 'Профиль', path: '/profile', icon: <User size={18} /> },
 ]
 
 const consultantNav: NavItem[] = [
-  { label: 'Overview', path: '/consultant/dashboard', icon: <LayoutDashboard size={18} /> },
-  { label: 'Assigned', path: '/consultant/requests', icon: <ClipboardList size={18} /> },
-  { label: 'Notifications', path: '/consultant/notifications', icon: <Bell size={18} /> },
-  { label: 'My Profile', path: '/consultant/profile', icon: <User size={18} /> },
-  { label: 'Contact Links', path: '/consultant/links', icon: <Link2 size={18} /> },
-  { label: 'Achievements', path: '/consultant/achievements', icon: <Trophy size={18} /> },
+  { label: 'Обзор', path: '/consultant/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Заявки', path: '/consultant/requests', icon: <ClipboardList size={18} />, badge: 3 },
+  { label: 'Сообщения', path: '/consultant/messages', icon: <MessageSquare size={18} />, badge: 5 },
+  { label: 'Уведомления', path: '/consultant/notifications', icon: <Bell size={18} /> },
+  { label: 'Мой профиль', path: '/consultant/profile', icon: <User size={18} /> },
+  { label: 'Контакты', path: '/consultant/links', icon: <Link2 size={18} /> },
+  { label: 'Достижения', path: '/consultant/achievements', icon: <Trophy size={18} /> },
 ]
 
 const adminNav: NavItem[] = [
-  { label: 'Platform', path: '/admin/dashboard', icon: <LayoutDashboard size={18} /> },
-  { label: 'Users', path: '/admin/users', icon: <Users size={18} /> },
-  { label: 'Consultants', path: '/admin/consultants', icon: <ShieldCheck size={18} /> },
-  { label: 'Requests', path: '/admin/requests', icon: <FileText size={18} /> },
-  { label: 'Notifications', path: '/admin/notifications', icon: <Bell size={18} /> },
-  { label: 'Achievements', path: '/admin/achievements', icon: <Trophy size={18} /> },
-  { label: 'Audit Log', path: '/admin/audit', icon: <ClipboardList size={18} /> },
+  { label: 'Обзор', path: '/admin/dashboard', icon: <LayoutDashboard size={18} /> },
+  { label: 'Пользователи', path: '/admin/users', icon: <Users size={18} /> },
+  { label: 'Консультанты', path: '/admin/consultants', icon: <ShieldCheck size={18} /> },
+  { label: 'Заводы', path: '/admin/factories', icon: <Building2 size={18} /> },
+  { label: 'Категории', path: '/admin/categories', icon: <Tag size={18} /> },
+  { label: 'Заявки', path: '/admin/requests', icon: <FileText size={18} /> },
+  { label: 'Достижения', path: '/admin/achievements', icon: <Trophy size={18} /> },
+  { label: 'Аудит', path: '/admin/audit', icon: <ClipboardList size={18} /> },
 ]
-
-function Logo() {
-  return (
-    <div className="flex items-center gap-2 px-3 py-1">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="6" width="6" height="20" rx="1" fill="white" />
-        <rect x="22" y="6" width="6" height="20" rx="1" fill="white" />
-        <path d="M10 6 L22 26" stroke="#3B82F6" strokeWidth="5" strokeLinecap="round" />
-        <rect x="10" y="4" width="12" height="4" rx="1" fill="#F59E0B" />
-      </svg>
-      <div>
-        <div className="text-white font-bold text-sm leading-none">NextGen.</div>
-        <div className="text-white/50 text-[10px] font-medium tracking-widest leading-none mt-0.5">CONSULTING</div>
-      </div>
-    </div>
-  )
-}
 
 export function Sidebar() {
   const { user, logout, isConsultant, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   const navItems = isAdmin ? adminNav : isConsultant ? consultantNav : clientNav
-
-  const roleLabel = isAdmin ? 'Admin · NextGen' : isConsultant ? 'Consultant' : 'Client'
+  const roleLabel = isAdmin ? 'Администратор' : isConsultant ? 'Консультант' : 'Клиент'
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -79,14 +58,14 @@ export function Sidebar() {
 
   function handleLogout() {
     logout()
-    toast.success('Signed out')
+    toast.success('Вы вышли')
     navigate('/login')
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 flex flex-col" style={{ background: '#0F172A' }}>
+    <aside className="fixed left-0 top-0 h-screen w-60 flex flex-col" style={{ background: '#0C1426' }}>
       <div className="px-4 py-5 border-b border-white/10">
-        <Logo />
+        <LogoFull variant="light" size="md" />
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
@@ -95,15 +74,15 @@ export function Sidebar() {
             <li key={item.path}>
               <NavLink
                 to={item.path}
-                className={({ isActive }) =>
-                  clsx(
-                    'sidebar-link',
-                    isActive && 'active',
-                  )
-                }
+                className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.badge != null && item.badge > 0 && (
+                  <span className="w-5 h-5 bg-[#E63946] rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}
@@ -112,7 +91,7 @@ export function Sidebar() {
 
       <div className="px-3 py-4 border-t border-white/10">
         <div className="flex items-center gap-2 px-2 py-2">
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-[#E63946] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -122,7 +101,7 @@ export function Sidebar() {
           <button
             onClick={handleLogout}
             className="text-white/40 hover:text-white/80 transition-colors"
-            title="Sign out"
+            title="Выйти"
           >
             <LogOut size={15} />
           </button>

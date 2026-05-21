@@ -32,7 +32,7 @@ public class RequestClientNotificationHandler extends AbstractRequestActionHandl
         switch (context.getActionType()) {
             case CREATED -> notifyClient(
                     request.getClientId(),
-                    "Your request \"" + request.getProduct() + "\" was created successfully and is awaiting review.",
+                    "Your request \"" + request.getProduct() + "\" was created and is awaiting review.",
                     requestId
             );
             case CONSULTANT_ASSIGNED -> notifyClient(
@@ -40,17 +40,31 @@ public class RequestClientNotificationHandler extends AbstractRequestActionHandl
                     "A consultant has been assigned to your request \"" + request.getProduct() + "\".",
                     requestId
             );
-            case STATUS_CHANGED -> {
-                RequestStatus newStatus = request.getStatus();
-                String statusLabel = switch (newStatus) {
-                    case PROGRESS -> "In Progress";
-                    case COMPLETED -> "Completed";
-                    case REJECTED -> "Rejected";
-                    default -> newStatus.name();
-                };
+            case FACTORY_ASSIGNED -> {
+                String factoryName = context.getActorName() != null ? context.getActorName() : "a factory";
                 notifyClient(
                         request.getClientId(),
-                        "Your request \"" + request.getProduct() + "\" status changed to: " + statusLabel + ".",
+                        "Your request \"" + request.getProduct() + "\" has been forwarded to " + factoryName + ".",
+                        requestId
+                );
+            }
+            case STATUS_CHANGED -> {
+                RequestStatus newStatus = request.getStatus();
+                String message = switch (newStatus) {
+                    case PROGRESS   -> "Your request \"" + request.getProduct() + "\" is now being processed.";
+                    case COMPLETED  -> "Your request \"" + request.getProduct() + "\" has been completed. 🎉";
+                    case REJECTED   -> "Your request \"" + request.getProduct() + "\" was rejected."
+                            + (request.getComment() != null ? " Reason: " + request.getComment() : "");
+                    default -> "Your request \"" + request.getProduct() + "\" status changed to: " + newStatus.name() + ".";
+                };
+                notifyClient(request.getClientId(), message, requestId);
+            }
+            case TRACKING_UPDATED -> {
+                String tracking = request.getTrackingNumber() != null
+                        ? " Tracking: " + request.getTrackingNumber() : "";
+                notifyClient(
+                        request.getClientId(),
+                        "Your order \"" + request.getProduct() + "\" has been shipped!" + tracking,
                         requestId
                 );
             }

@@ -4,88 +4,129 @@
 
 @layer base {
   :root {
-    --primary: #0F172A;
-    --accent: #3B82F6;
-    --gold: #F59E0B;
-    --success: #10B981;
-    --danger: #EF4444;
-    --bg: #F8FAFC;
+    --primary: #0C1426;
+    --primary-light: #1A2540;
+    --accent: #E63946;
+    --accent-hover: #C1121F;
+    --accent-soft: #FEE2E2;
+    --gold: #F4A261;
+    --gold-soft: #FEF3C7;
+    --bg: #F5F7FA;
     --card: #FFFFFF;
-    --text: #0F172A;
-    --muted: #64748B;
-    --border: #E2E8F0;
+    --card-hover: #FAFBFF;
+    --text-main: #0C1426;
+    --text-secondary: #4A5568;
+    --muted: #718096;
+    --border: #E8ECF0;
+    --border-strong: #CBD5E0;
+    --success: #0D9488;
+    --warning: #D97706;
+    --danger: #E63946;
+    --info: #3B82F6;
   }
 
   .dark {
-    --bg: #0F172A;
-    --card: #1E293B;
-    --text: #F8FAFC;
-    --muted: #94A3B8;
-    --border: #334155;
+    --bg: #0C1426;
+    --card: #1A2540;
+    --card-hover: #1E2D4A;
+    --text-main: #F7FAFC;
+    --text-secondary: #A0AEC0;
+    --muted: #718096;
+    --border: #2D3748;
+    --border-strong: #4A5568;
   }
 
   * {
-    @apply border-border;
     box-sizing: border-box;
   }
 
   body {
-    @apply bg-bg text-text-main font-sans antialiased;
+    @apply bg-bg font-sans antialiased;
+    color: var(--text-main);
     min-height: 100vh;
-  }
-
-  .dark body {
-    background-color: var(--bg);
-    color: var(--text);
   }
 }
 
 @layer components {
-  .sidebar-link {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors;
-    color: rgba(255, 255, 255, 0.7);
+  /* Buttons */
+  .btn-primary {
+    @apply bg-[#E63946] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#C1121F] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm;
+  }
+  .btn-secondary {
+    @apply bg-[#0C1426] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50;
+  }
+  .btn-outline {
+    @apply border border-[#CBD5E0] text-[#0C1426] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#F5F7FA] active:scale-[0.98] transition-all;
+  }
+  .btn-ghost {
+    @apply text-[#4A5568] px-3 py-2 rounded-lg text-sm font-medium hover:bg-[#F5F7FA] hover:text-[#0C1426] transition-colors;
+  }
+  .btn-danger {
+    @apply bg-[#E63946] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all;
   }
 
+  /* Cards */
+  .card {
+    @apply bg-[#FFFFFF] border border-[#E8ECF0] rounded-2xl shadow-sm;
+  }
+  .card-hover {
+    @apply bg-[#FFFFFF] border border-[#E8ECF0] rounded-2xl shadow-sm hover:border-[#CBD5E0] hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer;
+  }
+
+  /* Form */
+  .input-field {
+    @apply w-full px-3.5 py-2.5 border border-[#E8ECF0] rounded-xl text-sm bg-white text-[#0C1426] placeholder:text-[#718096] focus:outline-none focus:ring-2 focus:ring-[#E63946]/20 focus:border-[#E63946] transition-colors;
+  }
+  .form-label {
+    @apply block text-sm font-semibold text-[#0C1426] mb-1.5;
+  }
+
+  /* Tags & badges */
+  .category-tag {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#FEE2E2] text-[#E63946];
+  }
+  .badge-pending {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700;
+  }
+  .badge-progress {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700;
+  }
+  .badge-done {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-700;
+  }
+  .badge-rejected {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600;
+  }
+
+  /* Sidebar */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors;
+    color: rgba(255, 255, 255, 0.65);
+  }
   .sidebar-link:hover {
     background-color: rgba(255, 255, 255, 0.08);
     color: white;
   }
-
   .sidebar-link.active {
-    background-color: rgba(59, 130, 246, 0.2);
-    color: #60A5FA;
+    background-color: rgba(230, 57, 70, 0.15);
+    color: #F87171;
   }
 
-  .stat-card {
-    @apply bg-card rounded-xl border border-border p-5 flex flex-col gap-2;
+  /* Chat messages */
+  .message-in {
+    @apply bg-[#F5F7FA] border border-[#E8ECF0] rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-sm;
+  }
+  .message-out {
+    @apply bg-[#E63946] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-sm;
   }
 
-  .btn-primary {
-    @apply bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .btn-accent {
-    @apply bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .btn-ghost {
-    @apply border border-border text-text-main px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50;
-  }
-
-  .btn-danger {
-    @apply bg-danger text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-danger/90 transition-colors;
-  }
-
-  .input-field {
-    @apply w-full px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent bg-white;
-  }
-
-  .form-label {
-    @apply block text-sm font-medium text-text-main mb-1.5;
+  /* Section divider */
+  .section-divider {
+    @apply border-l-4 border-[#E63946] pl-4;
   }
 }
 
-/* Scrollbar styling */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -94,9 +135,9 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #CBD5E0;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #718096;
 }

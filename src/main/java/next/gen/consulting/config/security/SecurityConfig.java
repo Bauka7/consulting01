@@ -45,8 +45,12 @@ public class SecurityConfig {
                     "/actuator/health",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
-                    "/error"
+                    "/error",
+                    // SockJS / WebSocket handshake — auth is handled by STOMP interceptor
+                    "/ws/**"
                 ).permitAll()
+                // Factory portal — must come BEFORE the broad public GET rule
+                .requestMatchers("/api/factories/my", "/api/factories/my/**").hasRole("FACTORY")
                 .requestMatchers(HttpMethod.GET,
                     "/api/consultants",
                     "/api/consultants/**",
@@ -57,6 +61,8 @@ public class SecurityConfig {
                     "/api/contact-links/user/**",
                     "/api/achievements/user/**"
                 ).permitAll()
+                // Conversation endpoints — any authenticated user (role-specific guards in service)
+                .requestMatchers("/api/conversations/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

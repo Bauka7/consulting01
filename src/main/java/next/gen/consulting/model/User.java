@@ -55,6 +55,9 @@ public class User {
     
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Consultant consultant;
+
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private Factory factory;
     
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Request> clientRequests;

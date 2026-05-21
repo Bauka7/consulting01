@@ -6,7 +6,7 @@ import { AuthInit } from './AuthInit'
 function Loading() {
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-[#E63946] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }
@@ -30,6 +30,8 @@ export const router = createBrowserRouter([
       { path: '/register', element: L(() => import('@/pages/Register')) },
       { path: '/consultants', element: L(() => import('@/pages/Consultants')) },
       { path: '/consultants/:id', element: L(() => import('@/pages/Consultants/Detail')) },
+      { path: '/factories', element: L(() => import('@/pages/Factories')) },
+      { path: '/factories/:id', element: L(() => import('@/pages/Factories/Detail')) },
 
       // Client routes
       {
@@ -61,6 +63,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['CLIENT']}>
             {L(() => import('@/pages/client/RequestDetail'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/messages',
+        element: (
+          <ProtectedRoute roles={['CLIENT']}>
+            {L(() => import('@/pages/client/Messages'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/messages/:id',
+        element: (
+          <ProtectedRoute roles={['CLIENT']}>
+            {L(() => import('@/pages/client/Messages/Chat'))}
           </ProtectedRoute>
         ),
       },
@@ -103,6 +121,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['CONSULTANT']}>
             {L(() => import('@/pages/consultant/RequestDetail'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/consultant/messages',
+        element: (
+          <ProtectedRoute roles={['CONSULTANT']}>
+            {L(() => import('@/pages/consultant/Messages'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/consultant/messages/:id',
+        element: (
+          <ProtectedRoute roles={['CONSULTANT']}>
+            {L(() => import('@/pages/consultant/Messages/Chat'))}
           </ProtectedRoute>
         ),
       },
@@ -173,6 +207,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: '/admin/factories',
+        element: (
+          <ProtectedRoute roles={['ADMIN']}>
+            {L(() => import('@/pages/admin/Factories'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/categories',
+        element: (
+          <ProtectedRoute roles={['ADMIN']}>
+            {L(() => import('@/pages/admin/Categories'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: '/admin/requests',
         element: (
           <ProtectedRoute roles={['ADMIN']}>
@@ -201,6 +251,48 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['ADMIN']}>
             {L(() => import('@/pages/admin/Audit'))}
+          </ProtectedRoute>
+        ),
+      },
+
+      // Factory routes
+      {
+        path: '/factory/dashboard',
+        element: (
+          <ProtectedRoute roles={['FACTORY']}>
+            {L(() => import('@/pages/factory/Dashboard'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/factory/requests',
+        element: (
+          <ProtectedRoute roles={['FACTORY']}>
+            {L(() => import('@/pages/factory/Requests'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/factory/requests/:id',
+        element: (
+          <ProtectedRoute roles={['FACTORY']}>
+            {L(() => import('@/pages/factory/RequestDetail'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/factory/messages',
+        element: (
+          <ProtectedRoute roles={['FACTORY']}>
+            {L(() => import('@/pages/factory/Messages'))}
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/factory/messages/:id',
+        element: (
+          <ProtectedRoute roles={['FACTORY']}>
+            {L(() => import('@/pages/factory/Messages/Chat'))}
           </ProtectedRoute>
         ),
       },

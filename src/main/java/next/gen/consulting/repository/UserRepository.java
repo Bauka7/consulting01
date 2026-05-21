@@ -22,11 +22,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByPhoneIn(Collection<String> phones);
     List<User> findAllByRole(UserRole role);
 
-    @Query("""
-        SELECT u FROM User u
-        WHERE u.role = 'ADMIN' OR u.role = 'CONSULTANT'
-    """)
-    List<User> findAllByRole_AdminOrConsultant();
+    @Query("SELECT u FROM User u WHERE u.role IN :roles")
+    List<User> findAllByRoleIn(@org.springframework.data.repository.query.Param("roles")
+                               java.util.Collection<UserRole> roles);
+
+    default List<User> findAllByRole_AdminOrConsultant() {
+        return findAllByRoleIn(java.util.List.of(UserRole.ADMIN, UserRole.CONSULTANT));
+    }
 
     @Modifying
     @Query(value = "DELETE FROM users WHERE id = :id", nativeQuery = true)

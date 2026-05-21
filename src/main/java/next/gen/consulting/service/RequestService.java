@@ -1,21 +1,12 @@
 package next.gen.consulting.service;
 
 import lombok.RequiredArgsConstructor;
-import next.gen.consulting.dto.request.CreateRequestDto;
-import next.gen.consulting.dto.request.RequestDto;
-import next.gen.consulting.dto.request.UpdateRequestDto;
+import next.gen.consulting.dto.request.*;
 import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.request.RequestMapper;
-import next.gen.consulting.model.Consultant;
-import next.gen.consulting.model.Factory;
-import next.gen.consulting.model.Request;
-import next.gen.consulting.model.RequestStatus;
-import next.gen.consulting.model.User;
-import next.gen.consulting.repository.ConsultantRepository;
-import next.gen.consulting.repository.FactoryRepository;
-import next.gen.consulting.repository.RequestRepository;
-import next.gen.consulting.repository.UserRepository;
+import next.gen.consulting.model.*;
+import next.gen.consulting.repository.*;
 import next.gen.consulting.service.request.RequestActionChain;
 import next.gen.consulting.service.request.RequestActionContext;
 import next.gen.consulting.service.request.RequestActionType;
@@ -31,12 +22,16 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class RequestService {
 
-    private final RequestRepository requestRepository;
-    private final UserRepository userRepository;
+    private final RequestRepository  requestRepository;
+    private final UserRepository     userRepository;
     private final ConsultantRepository consultantRepository;
-    private final FactoryRepository factoryRepository;
-    private final RequestMapper requestMapper;
+    private final FactoryRepository  factoryRepository;
+    private final RequestMapper      requestMapper;
     private final RequestActionChain requestActionChain;
+
+    // ─────────────────────────────────────────────────────────────────
+    // QUERIES
+    // ─────────────────────────────────────────────────────────────────
 
     public RequestDto getById(UUID id) {
         return requestMapper.toDto(findById(id));
@@ -46,8 +41,8 @@ public class RequestService {
         return requestRepository.findByStatusNull(status, pageable).map(requestMapper::toDto);
     }
 
-    public Page<RequestDto> getByClientId(UUID clientId, Pageable pageable, RequestStatus status) {
-        return requestRepository.findByClientIdAndStatusNullable(clientId, status, pageable)
+    public Page<RequestDto> getMyRequests(UUID userId, Pageable pageable, RequestStatus status) {
+        return requestRepository.findByClientIdAndStatusNullable(userId, status, pageable)
                 .map(requestMapper::toDto);
     }
 
@@ -55,9 +50,9 @@ public class RequestService {
         return requestRepository.findByConsultantUserId(userId, pageable).map(requestMapper::toDto);
     }
 
-    public Page<RequestDto> getByStatus(RequestStatus status, Pageable pageable) {
-        return requestRepository.findByStatus(status, pageable).map(requestMapper::toDto);
-    }
+    // ─────────────────────────────────────────────────────────────────
+    // CREATE
+    // ─────────────────────────────────────────────────────────────────
 
     @Transactional
     public RequestDto create(CreateRequestDto dto, UUID clientId) {
@@ -66,7 +61,11 @@ public class RequestService {
 
         Consultant consultant = null;
         if (dto.getConsultantId() != null) {
-            consultant = consultantRepository.findById(dto.getConsultantId()).orElse(null);
+            consultant = consultantRepository.findById(dto.getConsultantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Consultant", "id", dto.getConsultantId()));
+            if (consultant.getUser().getId().equals(clientId)) {
+                throw new BadRequestException("You cannot assign yourself as a consultant");
+            }
         }
 
         Factory factory = null;
@@ -76,18 +75,20 @@ public class RequestService {
         }
 
         Request request = Request.builder()
-                .fullName(dto.getFullName())
-                .phone(dto.getPhone())
-                .product(dto.getProduct())
-                .description(dto.getDescription())
+                .fullName(dto.getFullName().trim())
+                .phone(dto.getPhone().trim())
+                .product(dto.getProduct().trim())
+                .description(dto.getDescription().trim())
                 .client(client)
                 .consultant(consultant)
                 .factory(factory)
+                .quantity(dto.getQuantity())
+                .unit(dto.getUnit())
+                .deadline(dto.getDeadline())
                 .status(RequestStatus.PENDING)
                 .build();
 
-        Request saved = requestRepository.save(request);
-        RequestDto result = requestMapper.toDto(saved);
+        RequestDto result = requestMapper.toDto(requestRepository.save(request));
 
         requestActionChain.process(RequestActionContext.builder()
                 .actionType(RequestActionType.CREATED)
@@ -95,8 +96,22 @@ public class RequestService {
                 .actorId(clientId)
                 .build());
 
+        // If factory was immediately set, notify factory user
+        if (factory != null && factory.getUser() != null) {
+            requestActionChain.process(RequestActionContext.builder()
+                    .actionType(RequestActionType.FACTORY_ASSIGNED)
+                    .request(result)
+                    .targetUserId(factory.getUser().getId())
+                    .actorName(factory.getName())
+                    .build());
+        }
+
         return result;
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // UPDATE (CLIENT / ADMIN — edits basic fields + reassigns)
+    // ─────────────────────────────────────────────────────────────────
 
     @Transactional
     public RequestDto update(UUID id, UpdateRequestDto dto, UUID actorId, boolean isAdmin) {
@@ -105,14 +120,17 @@ public class RequestService {
         if (!isAdmin && !request.getClient().getId().equals(actorId)) {
             throw new BadRequestException("You can only modify your own requests");
         }
-        if (request.getStatus() == RequestStatus.COMPLETED || request.getStatus() == RequestStatus.REJECTED) {
+        if (isTerminal(request.getStatus())) {
             throw new BadRequestException("Cannot modify a " + request.getStatus().name().toLowerCase() + " request");
         }
 
-        if (dto.getFullName() != null)    request.setFullName(dto.getFullName());
-        if (dto.getPhone() != null)        request.setPhone(dto.getPhone());
-        if (dto.getDescription() != null) request.setDescription(dto.getDescription());
-        if (dto.getProduct() != null)      request.setProduct(dto.getProduct());
+        if (dto.getFullName()    != null) request.setFullName(dto.getFullName().trim());
+        if (dto.getPhone()       != null) request.setPhone(dto.getPhone().trim());
+        if (dto.getDescription() != null) request.setDescription(dto.getDescription().trim());
+        if (dto.getProduct()     != null) request.setProduct(dto.getProduct().trim());
+        if (dto.getQuantity()    != null) request.setQuantity(dto.getQuantity());
+        if (dto.getUnit()        != null) request.setUnit(dto.getUnit());
+        if (dto.getDeadline()    != null) request.setDeadline(dto.getDeadline());
 
         boolean consultantChanged = false;
         UUID assignedConsultantUserId = null;
@@ -135,16 +153,26 @@ public class RequestService {
             }
         }
 
+        Factory previousFactory = request.getFactory();
+        boolean factoryChanged = false;
+        Factory newFactory = null;
+
         if (Boolean.TRUE.equals(dto.getRemoveFactory())) {
             request.setFactory(null);
+            factoryChanged = true;
         } else if (dto.getFactoryId() != null) {
             Factory factory = factoryRepository.findById(dto.getFactoryId())
                     .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", dto.getFactoryId()));
-            request.setFactory(factory);
+            if (previousFactory == null || !previousFactory.getId().equals(factory.getId())) {
+                request.setFactory(factory);
+                factoryChanged = true;
+                newFactory = factory;
+            }
         }
 
         RequestDto result = requestMapper.toDto(requestRepository.save(request));
 
+        // Fire appropriate action chain events
         if (consultantChanged && assignedConsultantUserId != null) {
             requestActionChain.process(RequestActionContext.builder()
                     .actionType(RequestActionType.CONSULTANT_ASSIGNED)
@@ -155,24 +183,32 @@ public class RequestService {
             requestActionChain.process(RequestActionContext.builder()
                     .actionType(RequestActionType.UPDATED)
                     .request(result)
+                    .actorId(actorId)
+                    .build());
+        }
+
+        if (factoryChanged && newFactory != null && newFactory.getUser() != null) {
+            requestActionChain.process(RequestActionContext.builder()
+                    .actionType(RequestActionType.FACTORY_ASSIGNED)
+                    .request(result)
+                    .targetUserId(newFactory.getUser().getId())
+                    .actorName(newFactory.getName())
                     .build());
         }
 
         return result;
     }
 
-    public Page<RequestDto> getMyRequests(UUID id, Pageable pageable, RequestStatus status) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
-        return getByClientId(user.getId(), pageable, status);
-    }
+    // ─────────────────────────────────────────────────────────────────
+    // STATUS CHANGE (CONSULTANT / ADMIN)
+    // ─────────────────────────────────────────────────────────────────
 
     @Transactional
-    public RequestDto updateStatus(UUID id, RequestStatus status, UUID actorId, boolean isAdmin, String comment) {
+    public RequestDto updateStatus(UUID id, RequestStatus newStatus, UUID actorId, boolean isAdmin, String comment) {
         Request request = findById(id);
         RequestStatus previousStatus = request.getStatus();
 
-        if (previousStatus == RequestStatus.COMPLETED || previousStatus == RequestStatus.REJECTED) {
+        if (isTerminal(previousStatus)) {
             throw new BadRequestException(
                     "Cannot change status of a " + previousStatus.name().toLowerCase() + " request");
         }
@@ -181,14 +217,17 @@ public class RequestService {
             Consultant consultant = consultantRepository.findByUserId(actorId)
                     .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", actorId));
             if (request.getConsultant() != null && !request.getConsultant().getId().equals(consultant.getId())) {
-                throw new BadRequestException("You are not assigned to this request");
+                throw new BadRequestException("You are not the assigned consultant for this request");
             }
-            request.setConsultant(consultant);
+            // Auto-assign consultant when they first change status
+            if (request.getConsultant() == null) {
+                request.setConsultant(consultant);
+            }
         }
 
-        request.setStatus(status);
-        if (comment != null) {
-            request.setComment(comment);
+        request.setStatus(newStatus);
+        if (comment != null && !comment.isBlank()) {
+            request.setComment(comment.trim());
         }
 
         RequestDto result = requestMapper.toDto(requestRepository.save(request));
@@ -203,11 +242,117 @@ public class RequestService {
         return result;
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // ASSIGN FACTORY (CONSULTANT for their own factory / ADMIN)
+    // ─────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public RequestDto assignFactory(UUID requestId, UUID factoryId, UUID actorId, boolean isAdmin) {
+        Request request = findById(requestId);
+
+        if (isTerminal(request.getStatus())) {
+            throw new BadRequestException("Cannot modify a completed/rejected request");
+        }
+
+        Factory factory = factoryRepository.findById(factoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", factoryId));
+
+        if (!isAdmin) {
+            // Only the assigned consultant may link a factory — and it must be their factory
+            Consultant consultant = consultantRepository.findByUserId(actorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Consultant", "userId", actorId));
+
+            if (request.getConsultant() == null || !request.getConsultant().getId().equals(consultant.getId())) {
+                throw new BadRequestException("Only the assigned consultant can link a factory to this request");
+            }
+            if (consultant.getFactory() == null || !consultant.getFactory().getId().equals(factory.getId())) {
+                throw new BadRequestException("You can only assign the factory you are affiliated with");
+            }
+        }
+
+        request.setFactory(factory);
+        RequestDto result = requestMapper.toDto(requestRepository.save(request));
+
+        requestActionChain.process(RequestActionContext.builder()
+                .actionType(RequestActionType.FACTORY_ASSIGNED)
+                .request(result)
+                .actorId(actorId)
+                .targetUserId(factory.getUser() != null ? factory.getUser().getId() : null)
+                .actorName(factory.getName())
+                .build());
+
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // UPDATE TRACKING (CONSULTANT assigned to request / FACTORY assigned / ADMIN)
+    // ─────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public RequestDto updateTracking(UUID requestId, UpdateTrackingDto dto, UUID actorId, boolean isAdmin) {
+        Request request = findById(requestId);
+
+        if (!isAdmin) {
+            verifyConsultantOrFactory(request, actorId);
+        }
+
+        if (dto.getTrackingNumber() != null) request.setTrackingNumber(dto.getTrackingNumber().trim());
+        if (dto.getTrackingUrl()    != null) request.setTrackingUrl(dto.getTrackingUrl().trim());
+        if (dto.getShippedAt()      != null) request.setShippedAt(dto.getShippedAt());
+
+        RequestDto result = requestMapper.toDto(requestRepository.save(request));
+
+        requestActionChain.process(RequestActionContext.builder()
+                .actionType(RequestActionType.TRACKING_UPDATED)
+                .request(result)
+                .actorId(actorId)
+                .build());
+
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // FACTORY COMMENT (only the FACTORY user linked to this request)
+    // ─────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public RequestDto addFactoryComment(UUID requestId, FactoryCommentDto dto, UUID factoryUserId) {
+        Request request = findById(requestId);
+
+        // Verify the caller is the factory user linked to this request's factory
+        if (request.getFactory() == null) {
+            throw new BadRequestException("No factory is assigned to this request");
+        }
+        if (request.getFactory().getUser() == null
+                || !request.getFactory().getUser().getId().equals(factoryUserId)) {
+            throw new BadRequestException("You are not the factory user assigned to this request");
+        }
+
+        request.setFactoryComment(dto.getComment().trim());
+        RequestDto result = requestMapper.toDto(requestRepository.save(request));
+
+        requestActionChain.process(RequestActionContext.builder()
+                .actionType(RequestActionType.FACTORY_COMMENT_ADDED)
+                .request(result)
+                .actorId(factoryUserId)
+                .actorName(request.getFactory().getName())
+                .build());
+
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // DELETE (CLIENT owns / ADMIN)
+    // ─────────────────────────────────────────────────────────────────
+
     @Transactional
     public void delete(UUID id, UUID actorId, boolean isAdmin) {
         Request request = findById(id);
         if (!isAdmin && !request.getClient().getId().equals(actorId)) {
             throw new BadRequestException("You can only delete your own requests");
+        }
+        if (!isAdmin && request.getStatus() != RequestStatus.PENDING) {
+            throw new BadRequestException("Cannot delete a request that is already in progress");
         }
         RequestDto dto = requestMapper.toDto(request);
         requestRepository.delete(request);
@@ -215,11 +360,52 @@ public class RequestService {
         requestActionChain.process(RequestActionContext.builder()
                 .actionType(RequestActionType.DELETED)
                 .request(dto)
+                .actorId(actorId)
                 .build());
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────────────
 
     private Request findById(UUID id) {
         return requestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Request", "id", id));
+    }
+
+    private boolean isTerminal(RequestStatus status) {
+        return status == RequestStatus.COMPLETED || status == RequestStatus.REJECTED;
+    }
+
+    /**
+     * Verifies the actor is either:
+     *  - The consultant assigned to the request, or
+     *  - The factory user linked to the factory assigned to the request.
+     */
+    private void verifyConsultantOrFactory(Request request, UUID actorId) {
+        // Check consultant
+        boolean isAssignedConsultant = request.getConsultant() != null
+                && request.getConsultant().getUser() != null
+                && request.getConsultant().getUser().getId().equals(actorId);
+
+        // Check factory user
+        boolean isAssignedFactory = request.getFactory() != null
+                && request.getFactory().getUser() != null
+                && request.getFactory().getUser().getId().equals(actorId);
+
+        if (!isAssignedConsultant && !isAssignedFactory) {
+            throw new BadRequestException(
+                    "Only the assigned consultant or factory can update shipment tracking");
+        }
+    }
+
+    // Kept for backward compat with RequestController
+    public Page<RequestDto> getByClientId(UUID clientId, Pageable pageable, RequestStatus status) {
+        return requestRepository.findByClientIdAndStatusNullable(clientId, status, pageable)
+                .map(requestMapper::toDto);
+    }
+
+    public Page<RequestDto> getByStatus(RequestStatus status, Pageable pageable) {
+        return requestRepository.findByStatus(status, pageable).map(requestMapper::toDto);
     }
 }

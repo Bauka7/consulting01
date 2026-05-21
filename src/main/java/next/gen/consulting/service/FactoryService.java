@@ -2,6 +2,7 @@ package next.gen.consulting.service;
 
 import lombok.RequiredArgsConstructor;
 import next.gen.consulting.dto.consultant.ConsultantDto;
+import next.gen.consulting.dto.factory.AssignFactoryUserDto;
 import next.gen.consulting.dto.factory.CreateFactoryDto;
 import next.gen.consulting.dto.factory.FactoryDto;
 import next.gen.consulting.dto.factory.UpdateFactoryDto;
@@ -9,15 +10,20 @@ import next.gen.consulting.exception.BadRequestException;
 import next.gen.consulting.exception.ResourceNotFoundException;
 import next.gen.consulting.mapper.consultant.ConsultantMapper;
 import next.gen.consulting.mapper.factory.FactoryMapper;
+import next.gen.consulting.mapper.request.RequestMapper;
 import next.gen.consulting.model.Factory;
 import next.gen.consulting.model.ProductCategory;
 import next.gen.consulting.model.RequestStatus;
+import next.gen.consulting.model.User;
+import next.gen.consulting.model.UserRole;
 import next.gen.consulting.repository.ConsultantRepository;
 import next.gen.consulting.repository.FactoryRepository;
 import next.gen.consulting.repository.ProductCategoryRepository;
 import next.gen.consulting.repository.RequestRepository;
+import next.gen.consulting.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,8 +40,11 @@ public class FactoryService {
     private final ProductCategoryRepository categoryRepository;
     private final ConsultantRepository consultantRepository;
     private final RequestRepository requestRepository;
+    private final UserRepository userRepository;
     private final FactoryMapper factoryMapper;
     private final ConsultantMapper consultantMapper;
+    private final RequestMapper requestMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public FactoryDto getById(UUID id) {
         return factoryMapper.toDto(findById(id));
@@ -116,6 +125,67 @@ public class FactoryService {
         factoryRepository.delete(factory);
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // FACTORY USER MANAGEMENT (admin-only)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Creates a new FACTORY-role user and links it to the given factory.
+     * If the factory already has a user account, throws BadRequestException.
+     */
+    @Transactional
+    public FactoryDto createFactoryUser(UUID factoryId, AssignFactoryUserDto dto) {
+        Factory factory = findById(factoryId);
+        if (factory.getUser() != null) {
+            throw new BadRequestException(
+                    "Factory already has a user account. Remove it first or use update.");
+        }
+
+        String normalizedPhone = dto.getPhone().trim();
+        if (userRepository.existsByPhone(normalizedPhone)) {
+            throw new BadRequestException("Phone number already in use: " + normalizedPhone);
+        }
+
+        User factoryUser = User.builder()
+                .fullName(dto.getFullName().trim())
+                .phone(normalizedPhone)
+                .passwordHash(passwordEncoder.encode(dto.getPassword()))
+                .role(UserRole.FACTORY)
+                .build();
+
+        User savedUser = userRepository.save(factoryUser);
+        factory.setUser(savedUser);
+        return factoryMapper.toDto(factoryRepository.save(factory));
+    }
+
+    /**
+     * Removes the user account link from a factory (does NOT delete the user record).
+     */
+    @Transactional
+    public FactoryDto removeFactoryUser(UUID factoryId) {
+        Factory factory = findById(factoryId);
+        if (factory.getUser() == null) {
+            throw new BadRequestException("Factory does not have a user account");
+        }
+        factory.setUser(null);
+        return factoryMapper.toDto(factoryRepository.save(factory));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // FACTORY PORTAL (factory user's own views)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public FactoryDto getMyFactory(UUID factoryUserId) {
+        return factoryMapper.toDto(findByUserId(factoryUserId));
+    }
+
+    public Page<next.gen.consulting.dto.request.RequestDto> getMyRequests(
+            UUID factoryUserId, Pageable pageable) {
+        Factory factory = findByUserId(factoryUserId);
+        return requestRepository.findByFactoryId(factory.getId(), pageable)
+                .map(requestMapper::toDto);
+    }
+
     private List<ProductCategory> resolveCategories(List<UUID> categoryIds) {
         if (categoryIds == null || categoryIds.isEmpty()) {
             return new ArrayList<>();
@@ -130,5 +200,10 @@ public class FactoryService {
     private Factory findById(UUID id) {
         return factoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Factory", "id", id));
+    }
+
+    private Factory findByUserId(UUID userId) {
+        return factoryRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Factory", "userId", userId));
     }
 }

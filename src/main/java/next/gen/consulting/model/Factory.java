@@ -36,6 +36,10 @@ public class Factory {
     @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
